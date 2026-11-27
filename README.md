@@ -94,7 +94,7 @@ npm install
 npm run build:win
 ```
 
-Run `dist\Chromium-Browser-Setup-1.0.1.exe` to install Chromium Browser for
+Run `dist\Chromium-Browser-Setup-1.0.2.exe` to install Chromium Browser for
 your Windows user. The installer adds a Desktop shortcut and a Start menu
 entry, and no administrator access is required.
 

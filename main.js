@@ -65,7 +65,7 @@ function syncBackgroundColor() {
   }
   for (const tab of tabs.values()) {
     if (tab.kind === 'web' && !tab.view.webContents.isDestroyed()) {
-      tab.view.webContents.setBackgroundColor(color);
+      tab.view.setBackgroundColor(color);
     }
   }
 }
@@ -373,7 +373,7 @@ function createTab(address, existingId) {
   tabs.set(id, tab);
 
   const contents = view.webContents;
-  contents.setBackgroundColor(getWindowBackgroundColor());
+  view.setBackgroundColor(getWindowBackgroundColor());
   tabsByWebContentsId.set(contents.id, tab);
   contents.on('before-input-event', (event, input) => handleShortcut(event, input, contents));
   contents.setZoomMode('isolated');
