@@ -2,16 +2,16 @@
 
 ## Run status
 
-- [ ] Complete interactive QA on Windows after `npm start` launches successfully.
+- [x] In the installed 1.0.3 app, open example.com and verify the Shields,
+  Extensions, and three-dot menus appear above the active web page.
+- [ ] Complete interactive QA on Windows after npm start launches successfully.
 - [ ] Capture light, dark, high-contrast, compact, and 200% scale screenshots.
 - [ ] Run a screen-reader pass and automated accessibility scan.
 - [ ] Record startup, new-tab, tab-switch, and Shields before/after measurements.
 
-The current checkout's `npm start` exits with code 1 and no diagnostic text in
-this environment, so the checks below are prepared but have not been performed
-in the running application. Automated Node tests and syntax checks are reported
-separately in the Phase 8 handoff.
-
+The development checkout's npm start was previously reported to exit with code
+1 and no diagnostic text; that launcher issue remains unverified. The
+installed-app check above passed, but full interactive QA is still in progress.
 ## Windows keyboard
 
 - [ ] Ctrl+T, Ctrl+W, Ctrl+Shift+T create, close, and restore tabs.

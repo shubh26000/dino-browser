@@ -6,6 +6,9 @@ contextBridge.exposeInMainWorld('browser', {
   reorderTab: (fromId, toId) => ipcRenderer.invoke('browser:reorder-tab', fromId, toId),
   showTabContextMenu: (id) => ipcRenderer.invoke('browser:show-tab-menu', id),
   showBookmarkContextMenu: (id) => ipcRenderer.invoke('browser:show-bookmark-menu', id),
+  showBrowserMenu: (position) => ipcRenderer.invoke('browser:show-browser-menu', position),
+  showShieldsMenu: (position) => ipcRenderer.invoke('browser:show-shields-menu', position),
+  showExtensionsMenu: (position) => ipcRenderer.invoke('browser:show-extensions-menu', position),
   focusPage: () => ipcRenderer.invoke('browser:focus-page'),
   setFindOpen: (open) => ipcRenderer.invoke('browser:set-find-open', open),
   findPage: (query, options) => ipcRenderer.invoke('browser:find-page', query, options),
@@ -43,6 +46,9 @@ contextBridge.exposeInMainWorld('browser', {
   },
   onLibrary: (callback) => {
     ipcRenderer.on('browser:library', (_event, data) => callback(data));
+  },
+  onToolbarMenuClosed: (callback) => {
+    ipcRenderer.on('browser:toolbar-menu-closed', (_event, kind) => callback(kind));
   },
   onError: (callback) => {
     ipcRenderer.on('browser:error', (_event, message) => callback(message));

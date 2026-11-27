@@ -107,6 +107,16 @@ function run(action) {
   });
 }
 
+function openToolbarMenu(button, width, openMenu) {
+  const rect = button.getBoundingClientRect();
+  const position = {
+    x: Math.max(0, Math.floor(rect.right - width)),
+    y: Math.ceil(rect.bottom),
+  };
+  button.setAttribute('aria-expanded', 'true');
+  run(openMenu(position));
+}
+
 function openFindBar() {
   findBar.hidden = false;
   document.body.classList.add('find-open');
@@ -2121,28 +2131,10 @@ findQuery.addEventListener('keydown', (event) => {
   }
 });
 shieldsButton.addEventListener('click', () => {
-  extensionsPopup.hidden = true;
-  extensionsButton.setAttribute('aria-expanded', 'false');
-  shieldsPopup.hidden = !shieldsPopup.hidden;
-  shieldsButton.setAttribute('aria-expanded', String(!shieldsPopup.hidden));
-  if (!shieldsPopup.hidden) renderShieldsPopup();
+  openToolbarMenu(shieldsButton, 360, window.browser.showShieldsMenu);
 });
 extensionsButton.addEventListener('click', () => {
-  shieldsPopup.hidden = true;
-  shieldsButton.setAttribute('aria-expanded', 'false');
-  extensionsPopup.hidden = !extensionsPopup.hidden;
-  extensionsButton.setAttribute('aria-expanded', String(!extensionsPopup.hidden));
-  if (!extensionsPopup.hidden) renderExtensionsPopup();
-});
-document.addEventListener('pointerdown', (event) => {
-  if (!shieldsPopup.hidden && !shieldsPopup.contains(event.target) && !shieldsButton.contains(event.target)) {
-    shieldsPopup.hidden = true;
-    shieldsButton.setAttribute('aria-expanded', 'false');
-  }
-  if (!extensionsPopup.hidden && !extensionsPopup.contains(event.target) && !extensionsButton.contains(event.target)) {
-    extensionsPopup.hidden = true;
-    extensionsButton.setAttribute('aria-expanded', 'false');
-  }
+  openToolbarMenu(extensionsButton, 320, window.browser.showExtensionsMenu);
 });
 document.addEventListener('keydown', (event) => {
   if (event.key === 'F6') {
@@ -2188,28 +2180,15 @@ document.querySelector('#reload').addEventListener('click', () => {
 });
 bookmarkButton.addEventListener('click', () => run(window.browser.toggleBookmark()));
 menuButton.addEventListener('click', () => {
-  menu.hidden = !menu.hidden;
-  menuButton.setAttribute('aria-expanded', String(!menu.hidden));
+  openToolbarMenu(menuButton, 240, window.browser.showBrowserMenu);
 });
-menu.querySelectorAll('[data-page]').forEach((button) => {
-  button.addEventListener('click', () => {
-    menu.hidden = true;
-    menuButton.setAttribute('aria-expanded', 'false');
-    run(window.browser.openInternal(button.dataset.page));
-  });
-});
-document.addEventListener('pointerdown', (event) => {
-  if (!menu.hidden && !menu.contains(event.target) && !menuButton.contains(event.target)) {
-    menu.hidden = true;
-    menuButton.setAttribute('aria-expanded', 'false');
-  }
-});
-document.addEventListener('keydown', (event) => {
-  if (event.key === 'Escape' && !menu.hidden) {
-    menu.hidden = true;
-    menuButton.setAttribute('aria-expanded', 'false');
-    menuButton.focus();
-  }
+window.browser.onToolbarMenuClosed((kind) => {
+  const button = {
+    browser: menuButton,
+    shields: shieldsButton,
+    extensions: extensionsButton,
+  }[kind];
+  button?.setAttribute('aria-expanded', 'false');
 });
 document.querySelector('#window-minimize').addEventListener('click', () => run(window.browser.minimize()));
 document.querySelector('#window-maximize').addEventListener('click', () => run(window.browser.toggleMaximize()));

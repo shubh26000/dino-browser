@@ -694,6 +694,186 @@ function showBookmarkContextMenu(id) {
   ]).popup({ window: browserWindow });
 }
 
+function showToolbarMenu(template, kind, position, preferredWidth) {
+  const menu = Menu.buildFromTemplate(template);
+  menu.on('menu-will-close', () => {
+    if (browserWindow && !browserWindow.isDestroyed()) {
+      browserWindow.webContents.send('browser:toolbar-menu-closed', kind);
+    }
+  });
+  const { width } = browserWindow.getContentBounds();
+  const options = { window: browserWindow };
+  if (position && Number.isFinite(position.x) && Number.isFinite(position.y)) {
+    options.x = Math.max(0, Math.min(width - preferredWidth, Math.round(position.x)));
+    options.y = Math.max(0, Math.round(position.y));
+  }
+  menu.popup(options);
+}
+
+function saveToolbarMenuSettings(patch, reload = true) {
+  store.updateSettings(patch);
+  void persistAndSendLibrary().then((saved) => {
+    const tab = tabs.get(activeTabId);
+    if (saved && reload && tab?.kind === 'web' && !tab.error) {
+      tab.view.webContents.reload();
+    }
+  });
+}
+
+function getActiveWebSite() {
+  const tab = tabs.get(activeTabId);
+  if (tab?.kind !== 'web' || tab.error) return null;
+  try {
+    const url = new URL(tab.view.webContents.getURL());
+    if (!['http:', 'https:'].includes(url.protocol)) return null;
+    return { tab, url: url.href, host: url.hostname.toLowerCase() };
+  } catch {
+    return null;
+  }
+}
+
+function setActiveSiteShields(enabled) {
+  const site = getActiveWebSite();
+  if (!site) return;
+  const oldExceptions = store.state.settings.shieldExceptions || [];
+  const shieldExceptions = enabled
+    ? oldExceptions.filter((domain) => site.host !== domain && !site.host.endsWith('.' + domain))
+    : [...new Set([...oldExceptions, site.host])];
+  saveToolbarMenuSettings({ shieldExceptions });
+}
+
+function showBrowserToolbarMenu(position) {
+  const pages = [
+    ['History', 'history', 'Ctrl+H'],
+    ['Bookmarks', 'bookmarks', 'Ctrl+Shift+O'],
+    ['Shields', 'shields'],
+    ['Extensions', 'extensions'],
+    ['Downloads', 'downloads'],
+    ['Settings', 'settings', 'Ctrl+,'],
+  ];
+  const template = pages.map(([label, page, accelerator]) => ({
+    label,
+    accelerator,
+    click: () => createInternalTab(page),
+  }));
+  showToolbarMenu(template, 'browser', position, 240);
+}
+
+function showShieldsToolbarMenu(position) {
+  const settings = store.state.settings;
+  const site = getActiveWebSite();
+  const template = [];
+  if (site) {
+    const siteEnabled = settings.shieldsEnabled
+      && !isShieldException(site.url, settings.shieldExceptions);
+    template.push(
+      { label: site.host, enabled: false },
+      { label: (site.tab.blockedRequestCount || 0) + ' requests blocked on this page', enabled: false },
+      { type: 'separator' },
+      {
+        label: 'Enable Shields for this site',
+        type: 'checkbox',
+        checked: siteEnabled,
+        enabled: settings.shieldsEnabled,
+        click: (item) => setActiveSiteShields(item.checked),
+      },
+      {
+        label: 'Report a broken site · turn Shields off here',
+        enabled: siteEnabled,
+        click: () => setActiveSiteShields(false),
+      },
+      { type: 'separator' },
+    );
+  } else {
+    template.push({ label: 'Open a website to see protection details', enabled: false });
+  }
+  template.push(
+    {
+      label: 'Enable Shields globally',
+      type: 'checkbox',
+      checked: settings.shieldsEnabled,
+      click: (item) => saveToolbarMenuSettings({ shieldsEnabled: item.checked }),
+    },
+    { type: 'separator' },
+    {
+      label: 'Advanced protections',
+      submenu: [
+        {
+          label: 'Ads',
+          type: 'checkbox',
+          checked: settings.adsBlocking,
+          click: (item) => saveToolbarMenuSettings({ adsBlocking: item.checked }),
+        },
+        {
+          label: 'Trackers',
+          type: 'checkbox',
+          checked: settings.trackersBlocking,
+          click: (item) => saveToolbarMenuSettings({ trackersBlocking: item.checked }),
+        },
+        {
+          label: 'HTTPS-first',
+          type: 'checkbox',
+          checked: settings.httpsFirst,
+          click: (item) => saveToolbarMenuSettings({ httpsFirst: item.checked }),
+        },
+        {
+          label: 'URL cleaning',
+          type: 'checkbox',
+          checked: settings.urlCleaning,
+          click: (item) => saveToolbarMenuSettings({ urlCleaning: item.checked }, false),
+        },
+      ],
+    },
+  );
+  const categoryCounts = site?.tab.blockedByCategory || {};
+  template.push(
+    { type: 'separator' },
+    {
+      label: 'Ads ' + (categoryCounts.ads || 0)
+        + ' · Trackers ' + (categoryCounts.trackers || 0)
+        + ' · Custom ' + (categoryCounts.custom || 0),
+      enabled: false,
+    },
+  );
+  const domains = [...(site?.tab.blockedDomains || [])].slice(0, 8);
+  if (domains.length) {
+    template.push(
+      { type: 'separator' },
+      ...domains.map((domain) => ({ label: domain, enabled: false })),
+    );
+  }
+  template.push(
+    { type: 'separator' },
+    { label: 'Open Shields settings', click: () => createInternalTab('shields') },
+  );
+  showToolbarMenu(template, 'shields', position, 360);
+}
+
+function showExtensionsToolbarMenu(position) {
+  const installed = (store.state.extensions || []).filter((extension) => extension.enabled);
+  const template = [{ label: 'Extensions', enabled: false }];
+  if (installed.length) {
+    template.push(
+      { type: 'separator' },
+      ...installed.map((extension) => ({
+        label: extension.name + (
+          extensionSupportRestartRequired || extensionRuntimeErrors.has(extension.key)
+            ? ' · Needs attention'
+            : ' · Enabled'
+        ),
+        enabled: false,
+      })),
+    );
+  } else {
+    template.push({ label: 'No enabled extensions', enabled: false });
+  }
+  template.push(
+    { type: 'separator' },
+    { label: 'Manage extensions', click: () => createInternalTab('extensions') },
+  );
+  showToolbarMenu(template, 'extensions', position, 320);
+}
+
 async function toggleActiveBookmark() {
   const tab = tabs.get(activeTabId);
   if (tab?.kind !== 'web') {
@@ -852,6 +1032,18 @@ ipcMain.handle('browser:show-tab-menu', (event, id) => {
 ipcMain.handle('browser:show-bookmark-menu', (event, id) => {
   assertTrustedUiSender(event);
   showBookmarkContextMenu(id);
+});
+ipcMain.handle('browser:show-browser-menu', (event, position) => {
+  assertTrustedUiSender(event);
+  showBrowserToolbarMenu(position);
+});
+ipcMain.handle('browser:show-shields-menu', (event, position) => {
+  assertTrustedUiSender(event);
+  showShieldsToolbarMenu(position);
+});
+ipcMain.handle('browser:show-extensions-menu', (event, position) => {
+  assertTrustedUiSender(event);
+  showExtensionsToolbarMenu(position);
 });
 ipcMain.handle('browser:focus-page', (event) => {
   assertTrustedUiSender(event);
