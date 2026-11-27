@@ -1,0 +1,51 @@
+{
+  "name": "chromium-desktop-browser",
+  "version": "1.0.1",
+  "private": true,
+  "description": "A lightweight Chromium desktop browser built with Electron.",
+  "main": "main.js",
+  "scripts": {
+    "start": "electron .",
+    "build:win": "electron-builder --win nsis",
+    "test": "node --test"
+  },
+  "build": {
+    "appId": "com.shubh26000.chromiumbrowser",
+    "productName": "Chromium Browser",
+    "directories": {
+      "output": "dist"
+    },
+    "files": [
+      "main.js",
+      "preload.js",
+      "renderer.js",
+      "browser-store.js",
+      "extension-manager.js",
+      "keyboard-shortcuts.js",
+      "shields.js",
+      "index.html",
+      "styles.css",
+      "navigation.js",
+      "assets/**",
+      "MANUAL_QA.md",
+      "PRIVACY.md",
+      "package.json"
+    ],
+    "win": {
+      "target": "nsis",
+      "artifactName": "Chromium-Browser-Setup-${version}.${ext}",
+      "icon": "assets/browser-icon.ico"
+    },
+    "nsis": {
+      "oneClick": true,
+      "perMachine": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "Chromium Browser"
+    }
+  },
+  "devDependencies": {
+    "electron": "^45.5.0",
+    "electron-builder": "^26.18.0"
+  }
+}
