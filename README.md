@@ -1,8 +1,9 @@
-# Chromium Desktop Browser
+# Dino Browser
 
 A lightweight Windows desktop browser built with Electron and its bundled
-Chromium engine. It includes encrypted history and bookmarks, a customizable
-search engine and theme, temporary website sessions, and a subtle ambient
+Chromium engine. The installed application is branded Chromium Browser. It
+includes encrypted history and bookmarks, a customizable search engine and
+theme, temporary website sessions, and a subtle ambient
 toolbar effect. The browser uses a custom tab bar and window controls instead
 of native File and Edit menus. New tabs show a minimal search/address bar;
 they do not automatically open a search engine page.
