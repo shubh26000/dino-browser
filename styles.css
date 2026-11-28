@@ -1748,6 +1748,7 @@ body.high-contrast {
   position: absolute;
   top: 18px;
   left: 20px;
+  max-width: calc(100% - 40px);
   gap: 8px;
 }
 
@@ -1773,6 +1774,66 @@ body.high-contrast {
 .start-page .privacy-stat span {
   opacity: .76;
   font-size: 11px;
+}
+
+.start-page .privacy-week-chart {
+  display: grid;
+  width: 154px;
+  min-width: 154px;
+  gap: 5px;
+  padding: 7px 9px;
+  border: 1px solid rgb(255 255 255 / calc(var(--start-card-opacity, 13%) + 8%));
+  border-radius: var(--radius-md);
+  background: rgb(255 255 255 / var(--start-card-opacity, 13%));
+  box-shadow: var(--shadow-1);
+  color: white;
+  backdrop-filter: blur(var(--blur-glass));
+}
+
+.privacy-week-title {
+  color: rgb(255 255 255 / 82%);
+  font-size: 10px;
+  font-weight: 600;
+}
+
+.privacy-week-days {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  align-items: end;
+  gap: 5px;
+}
+
+.privacy-week-day {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  min-width: 0;
+}
+
+.privacy-week-track {
+  display: flex;
+  width: 10px;
+  height: 25px;
+  align-items: flex-end;
+  overflow: hidden;
+  border-radius: var(--radius-pill);
+  background: rgb(255 255 255 / 12%);
+}
+
+.privacy-week-track i {
+  width: 100%;
+  height: 100%;
+  border-radius: inherit;
+  background: var(--gradient-accent);
+  transform: scaleY(var(--activity-scale, .035));
+  transform-origin: bottom;
+  transition: transform var(--motion-small) var(--ease-out);
+}
+
+.privacy-week-day time {
+  color: rgb(255 255 255 / 74%);
+  font-size: 9px;
+  font-variant-numeric: tabular-nums;
 }
 
 .start-shortcuts {

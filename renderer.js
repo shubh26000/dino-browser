@@ -483,7 +483,60 @@ function buildStartPageStats() {
     card.append(number, caption);
     panel.append(card);
   }
+  panel.append(buildPrivacyWeekChart(stats));
   return panel;
+}
+
+function getPrivacyWeekData(stats) {
+  const byDate = new Map((Array.isArray(stats.daily) ? stats.daily : []).map((day) => [day.date, day]));
+  const today = new Date();
+  return Array.from({ length: 7 }, (_unused, index) => {
+    const date = new Date(Date.UTC(today.getUTCFullYear(), today.getUTCMonth(), today.getUTCDate() - 6 + index));
+    const key = date.toISOString().slice(0, 10);
+    const day = byDate.get(key) || { ads: 0, trackers: 0, custom: 0 };
+    const total = day.ads + day.trackers + day.custom;
+    const label = date.toLocaleDateString([], { weekday: 'short', timeZone: 'UTC' });
+    return { date: key, label, total };
+  });
+}
+
+function buildPrivacyWeekChart(stats) {
+  const chart = document.createElement('section');
+  chart.className = 'privacy-week-chart';
+  chart.dataset.privacyWeekChart = 'true';
+  const title = document.createElement('span');
+  title.className = 'privacy-week-title';
+  title.textContent = 'Requests blocked · 7 days';
+  chart.append(title);
+  renderPrivacyWeekChart(chart, stats);
+  return chart;
+}
+
+function renderPrivacyWeekChart(chart, stats) {
+  const days = getPrivacyWeekData(stats);
+  const peak = Math.max(1, ...days.map((day) => day.total));
+  const total = days.reduce((sum, day) => sum + day.total, 0);
+  chart.setAttribute('role', 'img');
+  chart.setAttribute('aria-label', `Requests blocked over the last seven days: ${days.map((day) => `${day.label} ${day.total}`).join(', ')}. Total ${total}.`);
+  chart.querySelector('.privacy-week-days')?.remove();
+  const columns = document.createElement('div');
+  columns.className = 'privacy-week-days';
+  for (const day of days) {
+    const column = document.createElement('div');
+    column.className = 'privacy-week-day';
+    const track = document.createElement('span');
+    track.className = 'privacy-week-track';
+    const fill = document.createElement('i');
+    fill.style.setProperty('--activity-scale', String(day.total ? Math.max(.08, day.total / peak) : .035));
+    track.append(fill);
+    const label = document.createElement('time');
+    label.dateTime = day.date;
+    label.textContent = day.label;
+    column.title = `${day.label}: ${day.total} requests blocked`;
+    column.append(track, label);
+    columns.append(column);
+  }
+  chart.append(columns);
 }
 
 function buildShortcut(entry, isCustom = false) {
@@ -1201,6 +1254,7 @@ function updatePrivacyStats() {
   internalPage.querySelectorAll('[data-privacy-stat]').forEach((element) => {
     element.textContent = values[Number(element.dataset.privacyStat)] || '';
   });
+  internalPage.querySelectorAll('[data-privacy-week-chart]').forEach((chart) => renderPrivacyWeekChart(chart, stats));
 }
 
 function formatBytes(bytes) {

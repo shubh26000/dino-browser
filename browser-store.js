@@ -40,7 +40,7 @@ function defaultState() {
     },
     extensions: [],
     lastSession: { tabs: [], activeIndex: 0 },
-    shieldsStats: { ads: 0, trackers: 0, custom: 0 },
+    shieldsStats: { ads: 0, trackers: 0, custom: 0, daily: [] },
     startPage: {
       wallpaper: 'aurora',
       wallpaperPath: null,
@@ -271,7 +271,10 @@ class BrowserStore {
         tabs: this.state.lastSession.tabs.map((tab) => ({ ...tab })),
         activeIndex: this.state.lastSession.activeIndex,
       },
-      shieldsStats: { ...this.state.shieldsStats },
+      shieldsStats: {
+        ...this.state.shieldsStats,
+        daily: this.state.shieldsStats.daily.map((day) => ({ ...day })),
+      },
       startPage: {
         ...this.state.startPage,
         widgets: [...this.state.startPage.widgets],
@@ -284,6 +287,15 @@ class BrowserStore {
   recordBlockedRequest(category) {
     if (category === 'ads' || category === 'trackers' || category === 'custom') {
       this.state.shieldsStats[category] += 1;
+      const today = new Date().toISOString().slice(0, 10);
+      let day = this.state.shieldsStats.daily.find((entry) => entry.date === today);
+      if (!day) {
+        day = { date: today, ads: 0, trackers: 0, custom: 0 };
+        this.state.shieldsStats.daily.push(day);
+      }
+      day[category] += 1;
+      this.state.shieldsStats.daily.sort((first, second) => first.date.localeCompare(second.date));
+      this.state.shieldsStats.daily = this.state.shieldsStats.daily.slice(-7);
     }
   }
 
@@ -577,7 +589,7 @@ function parseState(text) {
   const httpsFirst = saved.settings.httpsFirst ?? true;
   const urlCleaning = saved.settings.urlCleaning ?? true;
   const customBlockedHosts = normalizeCustomBlockedHosts(saved.settings.customBlockedHosts ?? []);
-  const shieldsStats = saved.shieldsStats ?? { ads: 0, trackers: 0, custom: 0 };
+  const shieldsStats = { ...defaultState().shieldsStats, ...(saved.shieldsStats ?? {}) };
   const startPage = parseStartPage(saved.startPage);
   const profileName = saved.settings.profileName ?? 'Personal';
   const reduceMotion = saved.settings.reduceMotion ?? false;
@@ -649,6 +661,17 @@ function parseState(text) {
     ))
     || !isRecord(shieldsStats)
     || ['ads', 'trackers', 'custom'].some((key) => !Number.isSafeInteger(shieldsStats[key]) || shieldsStats[key] < 0)
+    || !Array.isArray(shieldsStats.daily)
+    || shieldsStats.daily.length > 7
+    || shieldsStats.daily.some((day) => (
+      !isRecord(day)
+      || typeof day.date !== 'string'
+      || !/^\d{4}-\d{2}-\d{2}$/.test(day.date)
+      || !Number.isFinite(Date.parse(`${day.date}T00:00:00.000Z`))
+      || new Date(`${day.date}T00:00:00.000Z`).toISOString().slice(0, 10) !== day.date
+      || ['ads', 'trackers', 'custom'].some((key) => !Number.isSafeInteger(day[key]) || day[key] < 0)
+    ))
+    || new Set(shieldsStats.daily.map((day) => day.date)).size !== shieldsStats.daily.length
   ) {
     throw new TypeError('Saved browser settings are invalid.');
   }
@@ -692,6 +715,7 @@ function parseState(text) {
       ads: shieldsStats.ads,
       trackers: shieldsStats.trackers,
       custom: shieldsStats.custom,
+      daily: shieldsStats.daily.map((day) => ({ ...day })),
     },
     startPage,
   };

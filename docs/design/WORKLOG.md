@@ -65,3 +65,11 @@
 - **Visual evidence:** `03-start-page.jpg` remains the baseline. The app still exits on `npm start` with code 1 and no diagnostic, so the after screenshot cannot be responsibly captured from the actual renderer yet. Performance measurements remain uncollected.
 - **Next:** Continue Phase 3 with the remaining drawer and widget details; return to Phase 4 after the start page is covered. Revisit visual capture as soon as the development runtime is available.
 
+## 2026-11-28 — Phase 3, batch 4: local seven-day Shields chart
+
+- **Data:** Added a bounded seven-day daily count to the existing encrypted local Shields statistics. Existing aggregate totals remain; older profiles default to an empty recent-history window and are not backfilled.
+- **Start page:** The privacy card now shows a small seven-day activity chart with weekday labels, hover counts, a screen-reader summary, and animated bar changes. Empty days are shown as near-zero bars so the full week remains legible.
+- **Verification:** `npm test` **33 passed, 0 failed**, including persisted daily counts and migration defaults; `npm run check:theme-contrast` **54 checks, 0 failures**; `node --check renderer.js`, `node --check browser-store.js`, and `git diff --check` passed.
+- **Known limits:** Weekly bars only include data recorded after this update; older aggregate totals are retained separately. The UI still needs a real-renderer screenshot and performance check because `npm start` exits 1 without diagnostics.
+- **Next:** Complete the remaining start-page customization/widget polish, then move to Phase 4.
+

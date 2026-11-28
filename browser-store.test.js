@@ -197,7 +197,13 @@ test('persists local Shields statistics and validates custom host rules', async 
 
   const loaded = new BrowserStore(filePath, makeEncryption());
   const snapshot = await loaded.load();
-  assert.deepEqual(snapshot.shieldsStats, { ads: 1, trackers: 1, custom: 0 });
+  const today = new Date().toISOString().slice(0, 10);
+  assert.deepEqual(snapshot.shieldsStats, {
+    ads: 1,
+    trackers: 1,
+    custom: 0,
+    daily: [{ date: today, ads: 1, trackers: 1, custom: 0 }],
+  });
   assert.deepEqual(snapshot.settings.customBlockedHosts, ['ads.example.test']);
   assert.throws(() => loaded.updateSettings({ customBlockedHosts: ['||ads.example.test^'] }), /valid host names/);
   assert.throws(() => loaded.updateSettings({ adsBlocking: 'false' }), /Invalid browser setting/);
@@ -341,6 +347,7 @@ test('fills appearance defaults when loading settings saved by an older version'
   assert.equal(loaded.settings.urlCleaning, true);
   assert.equal(loaded.startPage.layout, 'clean');
   assert.equal(loaded.startPage.wallpaper, 'aurora');
+  assert.deepEqual(loaded.shieldsStats.daily, []);
   assert.equal(loaded.startPage.wallpaperDim, 18);
   assert.equal(loaded.startPage.wallpaperBlur, 0);
   assert.equal(loaded.startPage.cardOpacity, 13);
