@@ -82,3 +82,10 @@
 - **Known limits:** Actual rendering, accessibility inspection at 200% zoom, and performance measurements remain pending because Electron exits before opening its window. No after screenshot is available.
 - **Next:** Phase 3 features are covered at the code level; proceed to Phase 4 settings and internal pages while keeping visual QA tracked.
 
+## 2026-11-28 — Phase 3, batch 6: theme selection in the customize drawer
+
+- **Change:** Added a theme selector to the start-page drawer, including System, Daylight, Dino Night, Aurora, Ember, Dino Green, and High contrast. Legacy Light/Dark settings are normalized in the control, and changing the theme applies through the existing settings flow.
+- **Verification:** `npm test` **33 passed, 0 failed**; `npm run check:theme-contrast` **54 checks, 0 failures**; `node --check renderer.js`, `node --check browser-store.js`, and `git diff --check` passed.
+- **Phase 3 gaps:** No real favicons are loaded; shortcut tiles use readable local letter tiles to honor the no-remote-assets rule. Widget data loads synchronously from local storage, so loading skeletons and remote error/retry states are not applicable yet. Full visual review, reduced-motion rendering, and performance measurements are pending an Electron runtime that opens successfully.
+- **Next:** Begin Phase 4 settings and internal-page polish, then Phase 5 cross-surface QA. Preserve these runtime and screenshot limitations in every report until resolved.
+

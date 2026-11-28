@@ -1159,6 +1159,17 @@ function renderCustomizeDrawer() {
   })));
   drawer.append(backgroundTitle, backgrounds, customWallpaper);
 
+  const savedTheme = library.settings.theme === 'dark' ? 'night'
+    : library.settings.theme === 'light' ? 'daylight' : library.settings.theme;
+  const theme = makeSelect(
+    [['system', 'System'], ['daylight', 'Daylight'], ['night', 'Dino Night'], ['aurora', 'Aurora'], ['ember', 'Ember'], ['green', 'Dino Green'], ['high-contrast', 'High contrast']],
+    savedTheme,
+    (value) => window.browser.updateSettings({ theme: value }),
+  );
+  theme.dataset.startTheme = 'true';
+  theme.setAttribute('aria-label', 'Start page color theme');
+  addDrawerSetting(drawer, 'Theme', 'Apply a browser theme without leaving the start page.', theme);
+
   const layout = makeSelect([['clean', 'Clean'], ['cards', 'Cards']], startPageValues().layout, (value) => window.browser.updateStartPage({ layout: value }));
   layout.dataset.startKey = 'layout';
   addDrawerSetting(drawer, 'Layout', 'Choose a clean page or show widget cards.', layout);
@@ -1270,6 +1281,10 @@ function syncStartPageControls() {
   });
   drawer.querySelectorAll('[data-widget-size-id]').forEach((control) => {
     control.value = settings.widgetSizes?.[control.dataset.widgetSizeId] || 'm';
+  });
+  drawer.querySelectorAll('[data-start-theme]').forEach((control) => {
+    control.value = library.settings.theme === 'dark' ? 'night'
+      : library.settings.theme === 'light' ? 'daylight' : library.settings.theme;
   });
   drawer.querySelectorAll('[data-start-wallpaper]').forEach((control) => {
     control.setAttribute('aria-pressed', String(settings.wallpaper === control.dataset.startWallpaper));
