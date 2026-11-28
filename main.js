@@ -278,21 +278,22 @@ function sendError(message) {
   }
 }
 
-async function persistStore() {
+async function persistStore({ notifyOnFailure = true } = {}) {
   try {
     await store.save();
     return true;
   } catch (error) {
     console.error('Unable to save browser data:', error);
-    sendError('Could not save browser data. Your latest changes may be lost.');
+    if (notifyOnFailure) sendError('Could not save browser data. Your latest changes may be lost.');
     return false;
   }
 }
 
-async function persistAndSendLibrary() {
-  const saved = await persistStore();
+async function persistAndSendLibrary({ errorMessage } = {}) {
+  const saved = await persistStore({ notifyOnFailure: !errorMessage });
   sendLibrary();
   sendState();
+  if (!saved && errorMessage) throw new Error(errorMessage);
   return saved;
 }
 
@@ -559,6 +560,12 @@ function createTab(address, existingId) {
   contents.on('will-navigate', (event, url) => {
     if (!isAllowedNavigation(url)) {
       event.preventDefault();
+    }
+  });
+  contents.on('will-redirect', (event, url, _isInPlace, isMainFrame) => {
+    if (isMainFrame && !isAllowedNavigation(url)) {
+      event.preventDefault();
+      console.warn('Blocked redirect to an unsupported protocol:', url);
     }
   });
   contents.on('page-title-updated', (_event, title) => {
@@ -1044,7 +1051,7 @@ async function toggleActiveBookmark() {
   }
   const contents = tab.view.webContents;
   const isBookmarked = store.toggleBookmark(contents.getURL(), tab.title);
-  await persistAndSendLibrary();
+  await persistAndSendLibrary({ errorMessage: 'The bookmark could not be saved.' });
   return isBookmarked;
 }
 
@@ -1091,7 +1098,7 @@ function handleShortcut(event, input, sourceContents) {
       for (const tab of tabs.values()) {
         if (tab.kind === 'web') store.addBookmark(tab.view.webContents.getURL(), tab.title);
       }
-      void persistAndSendLibrary();
+      void persistAndSendLibrary({ errorMessage: 'Bookmarks could not be saved.' }).catch((error) => sendError(error.message));
       break;
     }
     case 'reload':
@@ -1109,7 +1116,9 @@ function handleShortcut(event, input, sourceContents) {
     case 'clearBrowsingData': browserWindow.webContents.send('browser:clear-data'); break;
     case 'toggleBookmarksBar':
       store.updateSettings({ showBookmarksBar: !store.state.settings.showBookmarksBar });
-      void persistAndSendLibrary().then(() => updateViewBounds());
+      void persistAndSendLibrary({ errorMessage: 'The bookmarks bar setting could not be saved.' })
+        .then(() => updateViewBounds())
+        .catch((error) => sendError(error.message));
       break;
     case 'print':
       if (contents) contents.print();
@@ -1307,7 +1316,7 @@ ipcMain.handle('browser:remove-bookmark', async (event, id) => {
   assertTrustedUiSender(event);
   if (typeof id !== 'string') throw new TypeError('Bookmark id must be a string.');
   store.removeBookmark(id);
-  await persistAndSendLibrary();
+  await persistAndSendLibrary({ errorMessage: 'The bookmark could not be removed.' });
 });
 ipcMain.handle('browser:get-library', (event) => {
   assertTrustedUiSender(event);
@@ -1355,7 +1364,7 @@ ipcMain.handle('browser:install-extension', async (event, ticket) => {
     store.updateSettings({ extensionSupportEnabled: true });
     extensionSupportRestartRequired = true;
   }
-  if (!await persistAndSendLibrary()) throw new Error('The extension could not be saved.');
+  await persistAndSendLibrary({ errorMessage: 'The extension could not be saved.' });
   return { restartRequired: extensionSupportRestartRequired };
 });
 ipcMain.handle('browser:set-extension-enabled', async (event, key, enabled) => {
@@ -1379,7 +1388,7 @@ ipcMain.handle('browser:set-extension-enabled', async (event, key, enabled) => {
     store.updateExtension(key, { enabled: false, electronId: null });
     extensionRuntimeErrors.delete(key);
   }
-  await persistAndSendLibrary();
+  await persistAndSendLibrary({ errorMessage: 'The extension state could not be saved.' });
   return true;
 });
 ipcMain.handle('browser:remove-extension', async (event, key) => {
@@ -1432,13 +1441,13 @@ ipcMain.handle('browser:import-bookmarks', async (event) => {
   const extension = path.extname(selectedPath).toLowerCase();
   const entries = parseBookmarkImport(await fs.readFile(selectedPath, 'utf8'), extension);
   const imported = store.importBookmarks(entries);
-  if (imported) await persistAndSendLibrary();
+  if (imported) await persistAndSendLibrary({ errorMessage: 'Imported bookmarks could not be saved.' });
   return imported;
 });
 ipcMain.handle('browser:update-settings', async (event, settings) => {
   assertTrustedUiSender(event);
   store.updateSettings(settings);
-  await persistAndSendLibrary();
+  await persistAndSendLibrary({ errorMessage: 'Browser settings could not be saved.' });
   updateViewBounds();
   syncBackgroundColor();
   return store.snapshot().settings;
@@ -1446,7 +1455,7 @@ ipcMain.handle('browser:update-settings', async (event, settings) => {
 ipcMain.handle('browser:reset-settings', async (event) => {
   assertTrustedUiSender(event);
   store.resetSettings();
-  await persistAndSendLibrary();
+  await persistAndSendLibrary({ errorMessage: 'Browser settings could not be saved.' });
   updateViewBounds();
   syncBackgroundColor();
   return store.snapshot().settings;
@@ -1454,7 +1463,7 @@ ipcMain.handle('browser:reset-settings', async (event) => {
 ipcMain.handle('browser:update-start-page', async (event, patch) => {
   assertTrustedUiSender(event);
   store.updateStartPage(patch);
-  await persistAndSendLibrary();
+  await persistAndSendLibrary({ errorMessage: 'Start page settings could not be saved.' });
   return getLibraryState().startPage;
 });
 ipcMain.handle('browser:pick-wallpaper', async (event) => {
@@ -1471,7 +1480,7 @@ ipcMain.handle('browser:pick-wallpaper', async (event) => {
     throw new Error('Choose an image smaller than 12 MB.');
   }
   store.updateStartPage({ wallpaper: 'custom', wallpaperPath: selectedPath });
-  await persistAndSendLibrary();
+  await persistAndSendLibrary({ errorMessage: 'The wallpaper selection could not be saved.' });
   return getLibraryState().startPage;
 });
 ipcMain.handle('browser:clear-browsing-data', async (event, options = {}) => {
@@ -1687,6 +1696,12 @@ app.on('before-quit', (event) => {
   clearTimeout(shieldsStatsSaveTimer);
   const webTabs = [...tabs.values()].filter((tab) => tab.kind === 'web' && isAllowedNavigation(tab.error?.url || tab.view.webContents.getURL()));
   const activeIndex = webTabs.findIndex((tab) => tab.id === activeTabId);
-  store.setLastSession(webTabs.slice(0, 20).map((tab) => tab.error?.url || tab.view.webContents.getURL()), Math.max(0, activeIndex));
+  const sessionStart = Math.max(0, activeIndex - 19);
+  const sessionTabs = webTabs.slice(sessionStart, sessionStart + 20);
+  const sessionActiveIndex = activeIndex < sessionStart ? 0 : activeIndex - sessionStart;
+  store.setLastSession(
+    sessionTabs.map((tab) => tab.error?.url || tab.view.webContents.getURL()),
+    sessionActiveIndex,
+  );
   void persistStore().finally(() => app.quit());
 });

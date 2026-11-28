@@ -4,6 +4,9 @@
 
 - [x] In the installed 1.0.3 app, open example.com and verify the Shields,
   Extensions, and three-dot menus appear above the active web page.
+- [x] Install and launch the 1.0.4 app; the start page rendered successfully.
+- [ ] On 1.0.4, verify the toast overlay and menu behavior over a live web page;
+  this source review did not exercise those interactions.
 - [ ] Complete interactive QA on Windows after npm start launches successfully;
   the base-profile and fresh temporary-profile launches currently exit with code 1.
 - [ ] Capture light, dark, high-contrast, compact, and 200% scale screenshots.

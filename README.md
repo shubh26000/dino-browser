@@ -4,7 +4,7 @@
   <p><strong>A lightweight Windows desktop browser built with Electron and Chromium.</strong></p>
   <p>
     <img src="https://img.shields.io/badge/platform-Windows-0078D4?logo=windows&logoColor=white" alt="Platform: Windows" />
-    <img src="https://img.shields.io/badge/version-1.0.3-5B6CFF" alt="Version 1.0.3" />
+    <img src="https://img.shields.io/badge/version-1.0.4-5B6CFF" alt="Version 1.0.4" />
     <img src="https://img.shields.io/badge/engine-Electron%20%2B%20Chromium-47848F?logo=electron&logoColor=white" alt="Electron and Chromium" />
   </p>
   <p>
@@ -25,7 +25,7 @@ Dino Browser brings everyday browsing into a focused desktop app: a custom tab b
 |---|---|
 | **Platform** | Windows desktop |
 | **Built with** | Electron and its bundled Chromium engine |
-| **Current version** | 1.0.3 |
+| **Current version** | 1.0.4 |
 | **Data storage** | Browser library encrypted with Windows DPAPI; website storage is temporary by default |
 | **Project status** | Early build; see the [manual QA checklist](MANUAL_QA.md) for verification status and known gaps |
 
@@ -76,7 +76,7 @@ Build the installer from a Windows checkout:
    - Install dependencies: npm install
    - Build the installer: npm run build:win
 
-4. Launch the generated installer from the dist folder. For version 1.0.3, its name is Chromium-Browser-Setup-1.0.3.exe.
+4. Launch the generated installer from the dist folder. For version 1.0.4, its name is Chromium-Browser-Setup-1.0.4.exe.
 
 The installer is configured for the current Windows user and adds a Desktop shortcut and Start menu entry; administrator access is not required.
 

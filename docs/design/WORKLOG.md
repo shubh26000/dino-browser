@@ -145,3 +145,11 @@
 - **Verification:** `npm test` **33 passed, 0 failed**; `npm run check:theme-contrast` **61 checks, 0 failures**, including toast text on each palette's elevated surface; `node --check` passed for main/renderer and both preload/overlay scripts; package JSON parsing and `git diff --check` passed. The Electron window cannot be rendered in this environment, so visual stacking, focus, click-through, DPI, and timer behavior need Windows manual QA.
 - **Next:** Run code-level checks and review the overlay lifecycle carefully; then test it in a working Windows Electron runtime.
 
+## 2026-11-28 — code review: navigation redirects and session restore
+
+- **Navigation guard:** Added a main-frame redirect check to web tabs so server redirects cannot move a page to unsupported schemes such as `file:` after the initial HTTP/HTTPS navigation was allowed.
+- **Session restore:** When more than 20 web tabs are open, the saved restore window now includes the active tab and stores its index relative to the saved window.
+- **Save feedback:** Settings, start-page, bookmark, and extension actions now reject failed persistence instead of resolving as successful and showing a misleading “Saved” message.
+- **Documentation:** Updated release references to 1.0.4 and recorded that the installed app launched, while current overlay interactions still need manual QA.
+- **Verification:** No automated tests or runtime interactions were run in this review. The installed app remains separate from these source changes until a new build is produced.
+

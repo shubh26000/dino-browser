@@ -16,7 +16,7 @@ The main process creates each web tab as a `WebContentsView`, then adds it to th
 
 The current implementation routes the Shields, Extensions, browser, tab, bookmark, and page-context menus through Electron's native `Menu` popup API. In a live example.com tab, the Shields menu and browser menu were exposed as separate native menu panes above the page. That is the robust pattern already in use for anchored native menus; keep it for compact menus. Its trade-off is OS-native appearance and limited rich animation/theming. Any future rich floating surface (command palette, omnibox suggestions, custom large panels) should be rendered in a dedicated overlay `WebContentsView` above page views, with bounds tied to the window and explicit keyboard/focus handling. Do not add a DOM-only popup to the base renderer while a web view is active.
 
-Other surfaces found in code: the find bar is part of browser chrome and increases the page-view top bound; settings, history, bookmarks, downloads, and other internal pages are shown only when an internal tab is active; the customization drawer and toast are base-renderer DOM. The toast may be obscured if shown over a normal web tab and needs a separate visibility review before extending toast usage. Omnibox suggestions and a command palette are not implemented. The obsolete DOM popups for browser, Shields, and extensions were removed in Phase 5 after selector/handler review; the native Electron menu path is now the only toolbar-menu implementation.
+Other surfaces found in code: the find bar is part of browser chrome and increases the page-view top bound; settings, history, bookmarks, downloads, and other internal pages are shown only when an internal tab is active; the customization drawer remains base-renderer DOM. Status toasts now use a separate transparent child window over active web pages, but its stacking, click-through, focus, and scaling behavior still needs interactive Windows QA. Omnibox suggestions and a command palette are not implemented. The obsolete DOM popups for browser, Shields, and extensions were removed in Phase 5 after selector/handler review; the native Electron menu path is now the only toolbar-menu implementation.
 
 ## Security baseline
 
@@ -68,7 +68,7 @@ The current high-contrast mode is app-controlled and does not demonstrate forced
 2. **P1 — Fix contrast tokens before theme expansion.** White labels on the current dark accent measure 2.02:1; disabled text and the current light primary button also miss the requested contrast targets.
 3. **P1 — Establish named theme palettes and previews.** Current `system/light/dark` modes and freeform accent do not communicate a distinct visual identity or let users compare palettes.
 4. **P1 — Consolidate design values.** Color, radius, spacing, type and motion declarations are widely hard-coded; root spacing starts at 2px and text below 11px exists.
-5. **P2 — Audit lower-layer notices and transitions.** The toast is a BrowserWindow DOM element and may be behind a web `WebContentsView`; inspect it on a web tab. Add accessible feedback states consistently.
+5. **P2 — Verify the toast overlay lifecycle.** Exercise it on a web tab, including click-through, focus, resize, minimize/restore, display scaling, timeout, and screen-reader announcements.
 6. **P2 — Complete visual QA coverage.** Install/implement an approved local Electron screenshot/smoke harness in a later batch and cover scaling, forced colors, narrow windows, internal pages, loading/errors and multi-tab states.
 
 ## Baseline verification
