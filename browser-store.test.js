@@ -225,6 +225,7 @@ test('persists start page layout, custom shortcuts, widgets, tasks, and notes', 
     greetingName: 'Shubham',
     showClock: false,
     widgets: ['quote', 'todo', 'notes'],
+    widgetSizes: { quote: 's', todo: 'l' },
     shortcuts: [{ id: 'shortcut-1', title: 'Example', url: 'https://example.com/' }],
     todoItems: [{ id: 'todo-1', text: 'Review browser', done: true }],
     notes: 'Keep this note private.',
@@ -239,14 +240,18 @@ test('persists start page layout, custom shortcuts, widgets, tasks, and notes', 
   assert.equal(snapshot.startPage.wallpaperBlur, 3);
   assert.equal(snapshot.startPage.cardOpacity, 24);
   assert.deepEqual(snapshot.startPage.widgets, ['quote', 'todo', 'notes']);
+  assert.deepEqual(snapshot.startPage.widgetSizes, { quote: 's', todo: 'l' });
   assert.deepEqual(snapshot.startPage.shortcuts, [{ id: 'shortcut-1', title: 'Example', url: 'https://example.com/' }]);
   assert.deepEqual(snapshot.startPage.todoItems, [{ id: 'todo-1', text: 'Review browser', done: true }]);
   assert.equal(snapshot.startPage.notes, 'Keep this note private.');
   assert.throws(() => loaded.updateStartPage({ widgets: ['not-a-widget'] }), /invalid/);
+  assert.throws(() => loaded.updateStartPage({ widgetSizes: { unknown: 'm' } }), /invalid/);
+  assert.throws(() => loaded.updateStartPage({ widgetSizes: { quote: 'xl' } }), /invalid/);
   assert.throws(() => loaded.updateStartPage({ wallpaper: 'custom', wallpaperPath: null }), /invalid/);
   assert.throws(() => loaded.updateStartPage({ wallpaperDim: 66 }), /invalid/);
   assert.throws(() => loaded.updateStartPage({ wallpaperBlur: 9 }), /invalid/);
   assert.throws(() => loaded.updateStartPage({ cardOpacity: 7 }), /invalid/);
+  assert.doesNotThrow(() => loaded.updateStartPage({ wallpaper: 'time' }));
   assert.throws(() => loaded.updateStartPage({ shortcuts: [{ id: 'bad', title: 'Bad', url: 'file:///etc/passwd' }] }), /invalid/);
   assert.throws(() => loaded.updateStartPage({ notes: 'x'.repeat(5001) }), /invalid/);
 });
@@ -351,4 +356,5 @@ test('fills appearance defaults when loading settings saved by an older version'
   assert.equal(loaded.startPage.wallpaperDim, 18);
   assert.equal(loaded.startPage.wallpaperBlur, 0);
   assert.equal(loaded.startPage.cardOpacity, 13);
+  assert.deepEqual(loaded.startPage.widgetSizes, {});
 });

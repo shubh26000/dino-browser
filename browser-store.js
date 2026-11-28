@@ -8,7 +8,7 @@ const BOOKMARK_LIMIT = 500;
 const ENCRYPTED_FILE_HEADER = 'ChromiumBrowserEncrypted:v1\n';
 const SEARCH_ENGINES = new Set(['google', 'bing', 'duckduckgo']);
 const THEMES = new Set(['system', 'light', 'dark', 'daylight', 'night', 'aurora', 'ember', 'green', 'high-contrast']);
-const START_PAGE_WALLPAPERS = new Set(['aurora', 'sunset', 'forest', 'ocean', 'dune', 'custom']);
+const START_PAGE_WALLPAPERS = new Set(['aurora', 'sunset', 'forest', 'ocean', 'dune', 'time', 'custom']);
 const START_PAGE_WIDGETS = new Set(['quote', 'bookmarks', 'recent', 'todo', 'notes']);
 
 function defaultState() {
@@ -55,6 +55,7 @@ function defaultState() {
       showPrivacyStats: true,
       showShortcuts: true,
       widgets: [],
+      widgetSizes: {},
       shortcuts: [],
       todoItems: [],
       notes: '',
@@ -140,6 +141,8 @@ function parseStartPage(value) {
     || startPage.widgets.length > START_PAGE_WIDGETS.size
     || startPage.widgets.some((widget) => !START_PAGE_WIDGETS.has(widget))
     || new Set(startPage.widgets).size !== startPage.widgets.length
+    || !isRecord(startPage.widgetSizes)
+    || Object.entries(startPage.widgetSizes).some(([widget, size]) => !START_PAGE_WIDGETS.has(widget) || !['s', 'm', 'l'].includes(size))
     || !Array.isArray(startPage.shortcuts)
     || startPage.shortcuts.length > 20
     || startPage.shortcuts.some((shortcut) => (
@@ -184,6 +187,7 @@ function parseStartPage(value) {
     showPrivacyStats: startPage.showPrivacyStats,
     showShortcuts: startPage.showShortcuts,
     widgets: [...startPage.widgets],
+    widgetSizes: { ...startPage.widgetSizes },
     shortcuts: startPage.shortcuts.map((shortcut) => ({ ...shortcut })),
     todoItems: startPage.todoItems.map((item) => ({ ...item })),
     notes: startPage.notes,
@@ -278,6 +282,7 @@ class BrowserStore {
       startPage: {
         ...this.state.startPage,
         widgets: [...this.state.startPage.widgets],
+        widgetSizes: { ...this.state.startPage.widgetSizes },
         shortcuts: this.state.startPage.shortcuts.map((shortcut) => ({ ...shortcut })),
         todoItems: this.state.startPage.todoItems.map((item) => ({ ...item })),
       },

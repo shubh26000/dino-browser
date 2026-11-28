@@ -89,6 +89,7 @@ let library = {
 let settingsDestination;
 let toastTimer;
 let clockTimer;
+let wallpaperTimer;
 let notesSaveTimer;
 let shortcutSequence = 0;
 let tabSearchSignature = '';
@@ -441,7 +442,7 @@ function startPageValues() {
   return library.startPage || {
     wallpaper: 'aurora', wallpaperUrl: null, wallpaperDim: 18, wallpaperBlur: 0, cardOpacity: 13, layout: 'clean', greetingName: '',
     showGreeting: true, showClock: true, use24Hour: false, showPrivacyStats: true,
-    showShortcuts: true, widgets: [], shortcuts: [], todoItems: [], notes: '',
+    showShortcuts: true, widgets: [], widgetSizes: {}, shortcuts: [], todoItems: [], notes: '',
   };
 }
 
@@ -719,10 +720,53 @@ function openShortcutDialog(shortcut = null) {
 
 function createWidgetCard(widget) {
   const card = document.createElement('article');
-  card.className = `start-widget widget-${widget.id}`;
+  const size = startPageValues().widgetSizes?.[widget.id] || 'm';
+  card.className = `start-widget widget-${widget.id} widget-size-${size}`;
+  card.dataset.widgetId = widget.id;
+  const headingRow = document.createElement('header');
+  headingRow.className = 'start-widget-heading';
   const heading = document.createElement('h2');
   heading.textContent = widget.name;
-  card.append(heading);
+  const dragHandle = document.createElement('button');
+  dragHandle.className = 'start-widget-drag';
+  dragHandle.type = 'button';
+  dragHandle.draggable = true;
+  dragHandle.textContent = '⠿';
+  dragHandle.title = 'Drag to reorder widget';
+  dragHandle.setAttribute('aria-label', `Drag to reorder ${widget.name} widget`);
+  dragHandle.setAttribute('aria-keyshortcuts', 'Control+ArrowUp Control+ArrowDown');
+  dragHandle.addEventListener('keydown', (event) => {
+    if (!event.ctrlKey || !['ArrowUp', 'ArrowDown'].includes(event.key)) return;
+    event.preventDefault();
+    const widgets = [...startPageValues().widgets];
+    const index = widgets.indexOf(widget.id);
+    const nextIndex = Math.max(0, Math.min(widgets.length - 1, index + (event.key === 'ArrowUp' ? -1 : 1)));
+    if (index < 0 || nextIndex === index) return;
+    const [moved] = widgets.splice(index, 1);
+    widgets.splice(nextIndex, 0, moved);
+    run(window.browser.updateStartPage({ widgets }).then(() => showToast(`Moved ${widget.name} widget.`)));
+  });
+  dragHandle.addEventListener('dragstart', (event) => {
+    event.dataTransfer.setData('text/dino-widget-id', widget.id);
+    event.dataTransfer.effectAllowed = 'move';
+    card.classList.add('dragging');
+  });
+  dragHandle.addEventListener('dragend', () => card.classList.remove('dragging'));
+  card.addEventListener('dragover', (event) => {
+    event.preventDefault();
+    event.dataTransfer.dropEffect = 'move';
+    card.classList.add('drop-target');
+  });
+  card.addEventListener('dragleave', () => card.classList.remove('drop-target'));
+  card.addEventListener('drop', (event) => {
+    event.preventDefault();
+    card.classList.remove('drop-target');
+    const sourceId = event.dataTransfer.getData('text/dino-widget-id');
+    if (!sourceId || sourceId === widget.id) return;
+    moveStartWidget(sourceId, widget.id);
+  });
+  headingRow.append(heading, dragHandle);
+  card.append(headingRow);
   if (widget.id === 'quote') {
     const quotes = [
       'The secret of getting ahead is getting started.',
@@ -850,6 +894,16 @@ function createWidgetCard(widget) {
   return card;
 }
 
+function moveStartWidget(sourceId, targetId) {
+  const widgets = [...startPageValues().widgets];
+  const sourceIndex = widgets.indexOf(sourceId);
+  const targetIndex = widgets.indexOf(targetId);
+  if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return;
+  const [moved] = widgets.splice(sourceIndex, 1);
+  widgets.splice(targetIndex, 0, moved);
+  run(window.browser.updateStartPage({ widgets }));
+}
+
 function renderStartPageContent(focusSearch = false) {
   const root = document.querySelector('#start-page');
   if (!root) return;
@@ -857,6 +911,7 @@ function renderStartPageContent(focusSearch = false) {
   const previousSearchValue = previousSearch?.value || '';
   const shouldRefocusSearch = document.activeElement === previousSearch;
   const focusedShortcutId = document.activeElement?.closest('.start-shortcut')?.dataset.shortcutId;
+  const focusedWidgetId = document.activeElement?.closest('.start-widget')?.dataset.widgetId;
   const playEntrance = !root.dataset.entrancePlayed
     && !document.body.classList.contains('reduce-motion')
     && !document.body.classList.contains('reduce-effects');
@@ -865,6 +920,11 @@ function renderStartPageContent(focusSearch = false) {
   const settings = startPageValues();
   root.dataset.wallpaper = settings.wallpaper;
   root.dataset.layout = settings.layout;
+  updateTimeWallpaper(root);
+  window.clearInterval(wallpaperTimer);
+  if (settings.wallpaper === 'time') {
+    wallpaperTimer = window.setInterval(() => updateTimeWallpaper(root), 60000);
+  }
   applyStartPageVisualSettings(settings);
   let contentHost = root.querySelector('#start-content-layer');
   if (!contentHost) {
@@ -1001,6 +1061,8 @@ function renderStartPageContent(focusSearch = false) {
   ) searchInput.focus();
   else if (focusedShortcutId) {
     root.querySelector(`[data-shortcut-id="${CSS.escape(focusedShortcutId)}"] .start-shortcut-open`)?.focus();
+  } else if (focusedWidgetId) {
+    root.querySelector(`.start-widget[data-widget-id="${CSS.escape(focusedWidgetId)}"] .start-widget-drag`)?.focus();
   }
 }
 
@@ -1019,6 +1081,12 @@ function bindStartPageParallax(root) {
     root.style.setProperty('--parallax-x', '0px');
     root.style.setProperty('--parallax-y', '0px');
   });
+}
+
+function updateTimeWallpaper(root) {
+  if (root.dataset.wallpaper !== 'time') return;
+  const hour = new Date().getHours();
+  root.dataset.timeOfDay = hour < 11 ? 'morning' : hour < 17 ? 'day' : hour < 21 ? 'evening' : 'night';
 }
 
 function applyStartPageVisualSettings(settings) {
@@ -1062,7 +1130,7 @@ function renderCustomizeDrawer() {
   const backgrounds = document.createElement('div');
   backgrounds.className = 'wallpaper-presets';
   const presetNames = [
-    ['aurora', 'Aurora'], ['sunset', 'Sunset'], ['forest', 'Forest'], ['ocean', 'Ocean'], ['dune', 'Dune'],
+    ['aurora', 'Aurora'], ['sunset', 'Sunset'], ['forest', 'Forest'], ['ocean', 'Ocean'], ['dune', 'Dune'], ['time', 'Time of day'],
   ];
   for (const [id, label] of presetNames) {
     const button = document.createElement('button');
@@ -1118,7 +1186,7 @@ function renderCustomizeDrawer() {
   const widgetGallery = document.createElement('div');
   widgetGallery.className = 'widget-gallery';
   for (const widget of START_PAGE_WIDGET_MANIFEST) {
-    const row = document.createElement('label');
+    const row = document.createElement('div');
     row.className = 'widget-gallery-item';
     const copy = document.createElement('span');
     const title = document.createElement('strong');
@@ -1132,7 +1200,17 @@ function renderCustomizeDrawer() {
       run(window.browser.updateStartPage({ widgets, layout: 'cards' }));
     });
     toggle.dataset.widgetId = widget.id;
-    row.append(copy, toggle);
+    const size = makeSelect(
+      [['s', 'Small'], ['m', 'Medium'], ['l', 'Large']],
+      startPageValues().widgetSizes?.[widget.id] || 'm',
+      (value) => window.browser.updateStartPage({ widgetSizes: { ...startPageValues().widgetSizes, [widget.id]: value } }),
+    );
+    size.dataset.widgetSizeId = widget.id;
+    size.setAttribute('aria-label', `${widget.name} widget size`);
+    const controls = document.createElement('div');
+    controls.className = 'widget-gallery-controls';
+    controls.append(size, toggle);
+    row.append(copy, controls);
     widgetGallery.append(row);
   }
   drawer.append(widgetGallery);
@@ -1146,7 +1224,7 @@ function renderCustomizeDrawer() {
       wallpaper: 'aurora', wallpaperPath: null, layout: 'clean', greetingName: '',
       wallpaperDim: 18, wallpaperBlur: 0, cardOpacity: 13,
       showGreeting: true, showClock: true, use24Hour: false, showPrivacyStats: true,
-      showShortcuts: true, widgets: [], shortcuts: [], todoItems: [], notes: '',
+      showShortcuts: true, widgets: [], widgetSizes: {}, shortcuts: [], todoItems: [], notes: '',
     }).then(() => showToast('Start page reset.')));
   });
   drawer.append(reset);
@@ -1189,6 +1267,9 @@ function syncStartPageControls() {
   });
   drawer.querySelectorAll('[data-widget-id]').forEach((control) => {
     control.checked = settings.widgets.includes(control.dataset.widgetId);
+  });
+  drawer.querySelectorAll('[data-widget-size-id]').forEach((control) => {
+    control.value = settings.widgetSizes?.[control.dataset.widgetSizeId] || 'm';
   });
   drawer.querySelectorAll('[data-start-wallpaper]').forEach((control) => {
     control.setAttribute('aria-pressed', String(settings.wallpaper === control.dataset.startWallpaper));
@@ -2357,6 +2438,10 @@ function renderState(state) {
   const previousInternalPage = browserState.internalPage;
   const previousError = browserState.error;
   browserState = state;
+  if (state.internalPage !== 'home') {
+    window.clearInterval(clockTimer);
+    window.clearInterval(wallpaperTimer);
+  }
   document.body.classList.toggle('fullscreen', Boolean(state.isFullScreen));
   renderTabs();
   renderShieldsButton();
@@ -2494,7 +2579,7 @@ function textColorForAccent(hex) {
 
 async function updateWallpaperAccent() {
   const wallpaper = library.startPage;
-  const builtInAccents = { aurora: '#45cfc1', sunset: '#fb8761', forest: '#57bd79', ocean: '#45a7dc', dune: '#d49a56' };
+  const builtInAccents = { aurora: '#45cfc1', sunset: '#fb8761', forest: '#57bd79', ocean: '#45a7dc', dune: '#d49a56', time: '#7b6cff' };
   let accent = builtInAccents[wallpaper.wallpaper] || '#7b6cff';
   if (wallpaper.wallpaper === 'custom' && wallpaper.wallpaperUrl?.startsWith('file:')) {
     try {
@@ -2560,6 +2645,7 @@ function setLibrary(data) {
     showPrivacyStats: startPage.showPrivacyStats,
     showShortcuts: startPage.showShortcuts,
     widgets: startPage.widgets,
+    widgetSizes: startPage.widgetSizes,
     shortcuts: startPage.shortcuts,
   });
   const changedStartPageDisplay = startPageDisplay(previousLibrary.startPage) !== startPageDisplay(library.startPage);

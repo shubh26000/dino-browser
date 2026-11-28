@@ -73,3 +73,12 @@
 - **Known limits:** Weekly bars only include data recorded after this update; older aggregate totals are retained separately. The UI still needs a real-renderer screenshot and performance check because `npm start` exits 1 without diagnostics.
 - **Next:** Complete the remaining start-page customization/widget polish, then move to Phase 4.
 
+## 2026-11-28 — Phase 3, batch 5: time wallpaper and widget layout
+
+- **Wallpaper:** Added a local “Time of day” preset with distinct morning, day, evening and night gradients. It updates once per minute using the Windows local clock; no images or external assets are loaded.
+- **Widgets:** Added validated per-widget Small/Medium/Large sizing controls and visible-on-hover drag handles. Widget order persists through the existing local `widgets` list and can also be changed with Ctrl+Up/Down while a handle is focused. The drawer toggles widgets on/off. Existing profiles default to Medium without a migration prompt.
+- **Lifecycle:** The clock and time-wallpaper timers stop when leaving the start page.
+- **Verification:** `npm test` **33 passed, 0 failed**; `npm run check:theme-contrast` **54 checks, 0 failures**; `node --check renderer.js`, `node --check browser-store.js`, and `git diff --check` passed.
+- **Known limits:** Actual rendering, accessibility inspection at 200% zoom, and performance measurements remain pending because Electron exits before opening its window. No after screenshot is available.
+- **Next:** Phase 3 features are covered at the code level; proceed to Phase 4 settings and internal pages while keeping visual QA tracked.
+
