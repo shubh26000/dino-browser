@@ -20,3 +20,13 @@
 - **Known limits:** A full rendered screenshot suite, forced-colors mode, OS DPI variants, dynamic accent sampling of a real user wallpaper, and Electron runtime QA still need verification. Legacy component CSS still has direct style values, so token migration is not yet complete across all older components.
 - **Decision requested next:** Review the gallery and choose the default color direction. The app remains on the user's existing saved theme until they change it; new profiles use Dino Night.
 
+## 2026-11-28 — Phase 2, batch 1: tab and toolbar polish
+
+- **Direction:** The user selected Dino Night as the design direction. Work continues on `ui/redesign`.
+- **Tab strip:** Clarified the active tab with elevation and an accent marker. The close control fades in on hover/focus and remains visible for touch layouts. Tab position changes and the new-tab control use short FLIP transitions that respect the app's reduced-motion setting.
+- **Tab interactions:** Added a 500 ms delayed title/URL hover card inside the browser chrome, with bounded positioning so it stays above the web contents area. Added Left/Right and Home/End keyboard movement across tab controls. Removed duplicated tab semantics from the wrapper while retaining the tab role on the actual tab button.
+- **Toolbar polish:** The window-close hover state now uses semantic danger and surface tokens rather than fixed colors.
+- **Verification:** `npm test` **33 passed, 0 failed**; `npm run check:theme-contrast` **54 checks, 0 failures**; `node --check renderer.js` and `git diff --check` passed.
+- **Known limits:** Electron runtime QA is still unavailable in this checkout (the source launch exits with code 1 and no diagnostic, as recorded in Phase 1). The rendered tab card, keyboard flow, and interactions therefore need manual verification when the dev app can be launched. Legacy CSS values remain outside this batch's token migration.
+- **Next:** Continue Phase 2 with the remaining toolbar and navigation states, then Phase 3 start page. Keep the known runtime and stylesheet migration gaps visible.
+

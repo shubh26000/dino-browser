@@ -174,6 +174,13 @@ function renderTabs() {
   });
   if (signature === renderedTabsSignature) return;
   renderedTabsSignature = signature;
+  if (tabHoverCard) {
+    tabHoverCard.classList.remove('visible');
+    tabHoverCard.setAttribute('aria-hidden', 'true');
+    document.querySelector('.tab-title[aria-describedby="tab-hover-card"]')?.removeAttribute('aria-describedby');
+  }
+  const oldTabElements = new Map([...tabsElement.querySelectorAll('.tab[data-tab-id]')]
+    .map((element) => [element.dataset.tabId, { element, bounds: element.getBoundingClientRect() }]));
   const previousBounds = newTabButton.isConnected ? newTabButton.getBoundingClientRect() : null;
   tabsElement.replaceChildren();
   const currentTabIds = new Set();
@@ -200,12 +207,10 @@ function renderTabs() {
     element.className = `tab${tab.id === browserState.activeTabId ? ' active' : ''}`;
     element.dataset.tabId = tab.id;
     element.draggable = true;
-    element.setAttribute('aria-label', tab.title || 'Browser tab');
+    element.setAttribute('role', 'presentation');
     if (!renderedTabIds.has(tab.id)) {
       element.classList.add('tab-entering');
     }
-    element.setAttribute('role', 'tab');
-    element.setAttribute('aria-selected', String(tab.id === browserState.activeTabId));
 
     const title = document.createElement('button');
     title.className = 'tab-title';
@@ -226,6 +231,18 @@ function renderTabs() {
     title.setAttribute('aria-selected', String(tab.id === browserState.activeTabId));
     title.tabIndex = tab.id === browserState.activeTabId ? 0 : -1;
     title.addEventListener('click', () => run(window.browser.switchTab(tab.id)));
+    title.addEventListener('keydown', (event) => {
+      const tabButtons = [...tabsElement.querySelectorAll('.tab-title')];
+      const index = tabButtons.indexOf(title);
+      let nextIndex = index;
+      if (event.key === 'ArrowRight') nextIndex = (index + 1) % tabButtons.length;
+      else if (event.key === 'ArrowLeft') nextIndex = (index - 1 + tabButtons.length) % tabButtons.length;
+      else if (event.key === 'Home') nextIndex = 0;
+      else if (event.key === 'End') nextIndex = tabButtons.length - 1;
+      else return;
+      event.preventDefault();
+      tabButtons[nextIndex]?.focus();
+    });
 
     const close = document.createElement('button');
     close.className = 'tab-close';
@@ -233,6 +250,22 @@ function renderTabs() {
     close.append(makeIcon('close'));
     close.setAttribute('aria-label', `Close ${tab.title}`);
     close.addEventListener('click', () => run(window.browser.closeTab(tab.id)));
+
+    let hoverCardTimer;
+    const showHoverCard = () => {
+      window.clearTimeout(hoverCardTimer);
+      hoverCardTimer = window.setTimeout(() => showTabHoverCard(element, tab), 500);
+    };
+    element.addEventListener('pointerenter', showHoverCard);
+    element.addEventListener('pointerleave', () => {
+      window.clearTimeout(hoverCardTimer);
+      hideTabHoverCard();
+    });
+    element.addEventListener('focusin', showHoverCard);
+    element.addEventListener('focusout', () => {
+      window.clearTimeout(hoverCardTimer);
+      hideTabHoverCard();
+    });
 
     element.append(title, close);
     element.addEventListener('auxclick', (event) => {
@@ -271,9 +304,25 @@ function renderTabs() {
   if (!newTabPlaced) {
     tabsElement.append(newTabButton);
   }
+  const reducedMotion = document.body.classList.contains('reduce-motion');
+  if (!reducedMotion) {
+    for (const [id, old] of oldTabElements) {
+      const next = tabsElement.querySelector(`.tab[data-tab-id="${CSS.escape(id)}"]`);
+      if (!next) continue;
+      const bounds = next.getBoundingClientRect();
+      const offsetX = old.bounds.left - bounds.left;
+      const offsetY = old.bounds.top - bounds.top;
+      if (offsetX || offsetY) {
+        next.animate(
+          [{ transform: `translate(${offsetX}px, ${offsetY}px)` }, { transform: 'translate(0, 0)' }],
+          { duration: 180, easing: 'cubic-bezier(.2, .75, .25, 1)' },
+        );
+      }
+    }
+  }
   renderedTabIds = currentTabIds;
 
-  if (previousBounds && !window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+  if (previousBounds && !reducedMotion) {
     const nextBounds = newTabButton.getBoundingClientRect();
     const offsetX = previousBounds.left - nextBounds.left;
     const offsetY = previousBounds.top - nextBounds.top;
@@ -283,10 +332,50 @@ function renderTabs() {
           { transform: `translate(${offsetX}px, ${offsetY}px)` },
           { transform: 'translate(0, 0)' },
         ],
-        { duration: 220, easing: 'cubic-bezier(0.2, 0.8, 0.2, 1)' },
+        { duration: 180, easing: 'cubic-bezier(.2, .75, .25, 1)' },
       );
     }
   }
+}
+
+let tabHoverCard;
+let tabHoverCardHideTimer;
+function showTabHoverCard(tabElement, tab) {
+  window.clearTimeout(tabHoverCardHideTimer);
+  if (!tabHoverCard) {
+    tabHoverCard = document.createElement('div');
+    tabHoverCard.className = 'tab-hover-card';
+    tabHoverCard.setAttribute('aria-hidden', 'true');
+    tabHoverCard.setAttribute('role', 'tooltip');
+    tabHoverCard.id = 'tab-hover-card';
+    document.querySelector('.browser-chrome').append(tabHoverCard);
+  }
+  const title = document.createElement('strong');
+  title.textContent = tab.title || 'New tab';
+  const url = document.createElement('span');
+  url.textContent = tab.url || 'Blank page';
+  tabHoverCard.replaceChildren(title, url);
+  tabHoverCard.setAttribute('aria-hidden', 'false');
+  tabElement.querySelector('.tab-title')?.setAttribute('aria-describedby', tabHoverCard.id);
+  const chrome = document.querySelector('.browser-chrome');
+  const chromeRect = chrome.getBoundingClientRect();
+  const tabRect = tabElement.getBoundingClientRect();
+  const width = Math.min(280, chromeRect.width - 20);
+  const left = Math.max(10, Math.min(tabRect.left - chromeRect.left, chromeRect.width - width - 10));
+  const top = Math.min(tabRect.bottom - chromeRect.top + 3, chromeRect.height - 52);
+  tabHoverCard.style.left = `${left}px`;
+  tabHoverCard.style.top = `${top}px`;
+  tabHoverCard.classList.add('visible');
+}
+
+function hideTabHoverCard() {
+  if (!tabHoverCard) return;
+  window.clearTimeout(tabHoverCardHideTimer);
+  tabHoverCardHideTimer = window.setTimeout(() => {
+    tabHoverCard?.classList.remove('visible');
+    tabHoverCard?.setAttribute('aria-hidden', 'true');
+    document.querySelector('.tab-title[aria-describedby="tab-hover-card"]')?.removeAttribute('aria-describedby');
+  }, 80);
 }
 
 function renderBookmarksBar() {

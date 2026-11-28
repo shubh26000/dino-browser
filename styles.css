@@ -253,6 +253,7 @@ body.high-contrast {
 }
 
 .tab {
+  position: relative;
   display: flex;
   min-width: 96px;
   max-width: 220px;
@@ -260,8 +261,10 @@ body.high-contrast {
   align-items: center;
   flex: 0 1 190px;
   border: 1px solid transparent;
+  border-bottom: 0;
   border-radius: 9px 9px 0 0;
   background: transparent;
+  transition: background-color var(--motion-fast) ease, border-color var(--motion-fast) ease, box-shadow var(--motion-fast) ease;
 }
 
 .tab.dragging {
@@ -302,8 +305,20 @@ body.high-contrast {
 
 .tab.active {
   border-color: var(--border);
-  border-bottom-color: var(--bg-tab-active);
   background: var(--bg-tab-active);
+  box-shadow: var(--shadow-1);
+}
+
+.tab.active::after {
+  position: absolute;
+  right: 12px;
+  bottom: 0;
+  left: 12px;
+  height: 2px;
+  border-radius: var(--radius-pill);
+  background: var(--gradient-accent);
+  content: "";
+  pointer-events: none;
 }
 
 .tab:not(.active):hover {
@@ -379,6 +394,57 @@ body.high-contrast {
   color: var(--muted);
   display: grid;
   place-items: center;
+  opacity: 0;
+  transform: scale(.9);
+  transition: opacity var(--motion-fast) ease, transform var(--motion-fast) ease, background-color var(--motion-fast) ease;
+}
+
+.tab:hover .tab-close,
+.tab:focus-within .tab-close,
+.tab-close:focus-visible {
+  opacity: 1;
+  transform: scale(1);
+}
+
+.tab-hover-card {
+  position: absolute;
+  z-index: 5;
+  display: grid;
+  width: min(280px, calc(100vw - 20px));
+  gap: 3px;
+  padding: 8px 11px;
+  overflow: hidden;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-2);
+  color: var(--text-primary);
+  opacity: 0;
+  pointer-events: none;
+  transform: translateY(-3px);
+  transition: opacity var(--motion-fast) ease, transform var(--motion-fast) ease;
+}
+
+.tab-hover-card.visible {
+  opacity: 1;
+  transform: translateY(0);
+}
+
+.tab-hover-card strong,
+.tab-hover-card span {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.tab-hover-card strong {
+  font-size: 12px;
+  font-weight: 650;
+}
+
+.tab-hover-card span {
+  color: var(--text-secondary);
+  font-size: 11px;
 }
 
 .tab-close:hover,
@@ -450,8 +516,15 @@ body.high-contrast {
 }
 
 .window-control.close:hover {
-  background: #d9303e;
-  color: #fff;
+  background: var(--danger);
+  color: var(--bg-window);
+}
+
+@media (hover: none) {
+  .tab-close {
+    opacity: 1;
+    transform: none;
+  }
 }
 
 .toolbar {
