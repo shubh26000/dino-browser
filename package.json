@@ -1,6 +1,6 @@
 {
   "name": "chromium-desktop-browser",
-  "version": "1.0.3",
+  "version": "1.0.4",
   "private": true,
   "description": "A lightweight Chromium desktop browser built with Electron.",
   "main": "main.js",
