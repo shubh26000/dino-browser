@@ -29,6 +29,9 @@ contextBridge.exposeInMainWorld('browser', {
   resetSettings: () => ipcRenderer.invoke('browser:reset-settings'),
   importBookmarks: () => ipcRenderer.invoke('browser:import-bookmarks'),
   getAbout: () => ipcRenderer.invoke('browser:get-about'),
+  getUpdateStatus: () => ipcRenderer.invoke('browser:get-update-status'),
+  checkForUpdates: () => ipcRenderer.invoke('browser:check-updates'),
+  installUpdate: () => ipcRenderer.invoke('browser:install-update'),
   inspectExtension: () => ipcRenderer.invoke('browser:inspect-extension'),
   installExtension: (ticket) => ipcRenderer.invoke('browser:install-extension', ticket),
   setExtensionEnabled: (key, enabled) => ipcRenderer.invoke('browser:set-extension-enabled', key, enabled),
@@ -63,6 +66,9 @@ contextBridge.exposeInMainWorld('browser', {
   onFindResult: (callback) => ipcRenderer.on('browser:find-result', (_event, result) => callback(result)),
   onFindClosed: (callback) => ipcRenderer.on('browser:find-closed', callback),
   onClearData: (callback) => ipcRenderer.on('browser:clear-data', callback),
+  onUpdateStatus: (callback) => {
+    ipcRenderer.on('browser:update-status', (_event, status) => callback(status));
+  },
   onFocusCycle: (callback) => ipcRenderer.on('browser:cycle-focus', (_event, options) => callback(options)),
   onFocusInternalPage: (callback) => ipcRenderer.on('browser:focus-internal-page', callback),
 });

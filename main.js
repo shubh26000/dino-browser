@@ -14,6 +14,7 @@ const {
   session,
   nativeTheme,
 } = require('electron');
+const { autoUpdater } = require('electron-updater');
 const { BrowserStore } = require('./browser-store');
 const { inspectUnpackedExtension } = require('./extension-manager');
 const { resolveBrowserShortcut } = require('./keyboard-shortcuts');
@@ -60,6 +61,76 @@ const extensionInstallTickets = new Map();
 const extensionRuntimeErrors = new Map();
 const recentlyClosedTabs = [];
 let findBarOpen = false;
+let updateStatus = {
+  state: 'idle',
+  currentVersion: app.getVersion(),
+  availableVersion: null,
+  percent: 0,
+};
+let updateCheckTimer;
+
+function setUpdateStatus(state, details = {}) {
+  updateStatus = {
+    ...updateStatus,
+    ...details,
+    state,
+    currentVersion: app.getVersion(),
+  };
+  if (browserWindow && !browserWindow.isDestroyed() && !browserWindow.webContents.isDestroyed()) {
+    browserWindow.webContents.send('browser:update-status', updateStatus);
+  }
+}
+
+function configureAutoUpdater() {
+  if (!app.isPackaged) return;
+
+  autoUpdater.autoDownload = true;
+  autoUpdater.autoInstallOnAppQuit = false;
+  autoUpdater.allowPrerelease = false;
+  autoUpdater.logger = console;
+  autoUpdater.on('checking-for-update', () => setUpdateStatus('checking'));
+  autoUpdater.on('update-available', (info) => setUpdateStatus('downloading', {
+    availableVersion: info.version,
+    percent: 0,
+  }));
+  autoUpdater.on('update-not-available', () => setUpdateStatus('not-available', {
+    availableVersion: null,
+    percent: 0,
+  }));
+  autoUpdater.on('download-progress', (progress) => setUpdateStatus('downloading', {
+    percent: Math.max(0, Math.min(100, Math.round(progress.percent || 0))),
+  }));
+  autoUpdater.on('update-downloaded', (info) => setUpdateStatus('downloaded', {
+    availableVersion: info.version,
+    percent: 100,
+  }));
+  autoUpdater.on('error', (error) => {
+    console.error('Dino Browser update error:', error);
+    setUpdateStatus('error', { error: error.message || 'Update check failed.' });
+  });
+
+  updateCheckTimer = setTimeout(() => { void checkForBrowserUpdates(); }, 15000);
+  updateCheckTimer.unref?.();
+  const interval = setInterval(() => { void checkForBrowserUpdates(); }, 6 * 60 * 60 * 1000);
+  interval.unref?.();
+}
+
+async function checkForBrowserUpdates() {
+  if (!app.isPackaged) {
+    setUpdateStatus('unsupported');
+    return updateStatus;
+  }
+  if (['checking', 'downloading', 'downloaded'].includes(updateStatus.state)) return updateStatus;
+
+  setUpdateStatus('checking', { error: null });
+  try {
+    await autoUpdater.checkForUpdates();
+  } catch (error) {
+    console.error('Unable to check for Dino Browser updates:', error);
+    setUpdateStatus('error', { error: error.message || 'Update check failed.' });
+  }
+  return updateStatus;
+}
 
 function getToolbarHeight() {
   const compact = store?.state.settings.density === 'compact';
@@ -1330,6 +1401,22 @@ ipcMain.handle('browser:get-about', (event) => {
     chromium: process.versions.chrome,
   };
 });
+ipcMain.handle('browser:get-update-status', (event) => {
+  assertTrustedUiSender(event);
+  return updateStatus;
+});
+ipcMain.handle('browser:check-updates', (event) => {
+  assertTrustedUiSender(event);
+  return checkForBrowserUpdates();
+});
+ipcMain.handle('browser:install-update', (event) => {
+  assertTrustedUiSender(event);
+  if (!app.isPackaged || updateStatus.state !== 'downloaded') {
+    throw new Error('There is no downloaded update ready to install.');
+  }
+  autoUpdater.quitAndInstall(false, true);
+  return true;
+});
 ipcMain.handle('browser:inspect-extension', async (event) => {
   assertTrustedUiSender(event);
   const result = await dialog.showOpenDialog(browserWindow, {
@@ -1661,6 +1748,7 @@ app.whenReady().then(async () => {
     configureRequestProtection();
     Menu.setApplicationMenu(null);
     createWindow();
+    configureAutoUpdater();
   } catch (error) {
     console.error('Unable to load browser data:', error);
     dialog.showErrorBox(

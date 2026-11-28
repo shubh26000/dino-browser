@@ -1,5 +1,23 @@
 # Manual QA checklist
 
+## Self-updates (1.0.5+ packaged builds)
+
+- [ ] Install a prior version, install 1.0.5 once, then publish a higher version
+  as a public, non-draft GitHub release with generated `latest.yml` metadata.
+- [ ] Verify the packaged app checks for updates after startup and can also check
+  from Settings → About; development runs should clearly report that updates
+  require an installed build.
+- [ ] Verify a current install reports up to date, and an offline or unavailable
+  release reports a recoverable error without interrupting browsing.
+- [ ] Confirm a newer installer downloads in the background, progress updates,
+  and the browser only installs after clicking “Restart to update”.
+- [ ] Confirm normal app close does not install an update automatically, and the
+  downloaded update installs successfully after the explicit restart action.
+- [ ] Verify browser data, bookmarks, and the existing per-user install survive
+  an in-app update. Test an interrupted download and retry after reconnecting.
+- [ ] Confirm Windows SmartScreen/signing behavior for the current unsigned
+  installer; configure Authenticode signing before treating releases as trusted.
+
 ## Run status
 
 - [x] In the installed 1.0.3 app, open example.com and verify the Shields,

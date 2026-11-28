@@ -1,6 +1,6 @@
 {
   "name": "chromium-desktop-browser",
-  "version": "1.0.4",
+  "version": "1.0.5",
   "private": true,
   "description": "A lightweight Chromium desktop browser built with Electron.",
   "main": "main.js",
@@ -41,7 +41,8 @@
     "win": {
       "target": "nsis",
       "artifactName": "Chromium-Browser-Setup-${version}.${ext}",
-      "icon": "assets/browser-icon.ico"
+      "icon": "assets/browser-icon.ico",
+      "verifyUpdateCodeSignature": false
     },
     "nsis": {
       "oneClick": true,
@@ -49,10 +50,19 @@
       "createDesktopShortcut": true,
       "createStartMenuShortcut": true,
       "shortcutName": "Chromium Browser"
+    },
+    "publish": {
+      "provider": "github",
+      "owner": "shubh26000",
+      "repo": "dino-browser",
+      "releaseType": "release"
     }
   },
   "devDependencies": {
     "electron": "^45.5.0",
     "electron-builder": "^26.18.0"
+  },
+  "dependencies": {
+    "electron-updater": "^6.8.12"
   }
 }

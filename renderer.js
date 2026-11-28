@@ -117,6 +117,9 @@ let wallpaperTimer;
 let notesSaveTimer;
 let shortcutSequence = 0;
 let tabSearchSignature = '';
+let updateStatusLine;
+let checkUpdateButton;
+let restartUpdateButton;
 const START_PAGE_WIDGET_MANIFEST = [
   { id: 'quote', name: 'Quote of the day', description: 'A short offline quote.', sizes: ['S'], settingsSchema: {}, permissions: [], dataSources: ['bundled'] },
   { id: 'bookmarks', name: 'Bookmarks', description: 'Your saved bookmarks.', sizes: ['S', 'M'], settingsSchema: {}, permissions: [], dataSources: ['local bookmarks'] },
@@ -138,6 +141,26 @@ function showToast(message) {
   void window.browser.showToast(text).catch(() => {
     if (!toast.hidden) toast.setAttribute('aria-live', 'polite');
   });
+}
+
+function renderUpdateStatus(status) {
+  if (!updateStatusLine?.isConnected || !status) return;
+  const version = status.availableVersion ? ` ${status.availableVersion}` : '';
+  const percent = Number.isFinite(status.percent) ? ` (${status.percent}%)` : '';
+  const labels = {
+    idle: 'Updates are checked automatically. You can also check now.',
+    checking: 'Checking for updates…',
+    downloading: `Downloading update${version}${percent}…`,
+    downloaded: `Update${version} is ready. Restart Dino Browser to install it.`,
+    'not-available': 'Dino Browser is up to date.',
+    unsupported: 'Updates are available in installed versions of Dino Browser.',
+    error: 'Could not check for updates. Check your connection and try again.',
+  };
+  updateStatusLine.textContent = labels[status.state] || labels.idle;
+  const busy = ['checking', 'downloading'].includes(status.state);
+  checkUpdateButton.disabled = busy || status.state === 'unsupported';
+  checkUpdateButton.textContent = busy ? 'Checking…' : 'Check for updates';
+  restartUpdateButton.hidden = status.state !== 'downloaded';
 }
 
 function isWebPageActive(state = browserState) {
@@ -2096,7 +2119,41 @@ function renderSettingsPage() {
   }).catch(() => {
     about.textContent = 'Version information is not available.';
   });
-  addSetting('Updates', 'This build has no browser updater. Install a newer signed release when one is available.');
+  const updateControls = document.createElement('div');
+  updateControls.className = 'update-controls';
+  updateStatusLine = document.createElement('p');
+  updateStatusLine.className = 'update-status';
+  updateStatusLine.setAttribute('role', 'status');
+  checkUpdateButton = document.createElement('button');
+  checkUpdateButton.className = 'secondary-button';
+  checkUpdateButton.type = 'button';
+  checkUpdateButton.textContent = 'Check for updates';
+  checkUpdateButton.addEventListener('click', () => {
+    checkUpdateButton.disabled = true;
+    updateStatusLine.textContent = 'Checking for updates…';
+    run(window.browser.checkForUpdates());
+  });
+  restartUpdateButton = document.createElement('button');
+  restartUpdateButton.className = 'primary-button';
+  restartUpdateButton.type = 'button';
+  restartUpdateButton.textContent = 'Restart to update';
+  restartUpdateButton.hidden = true;
+  restartUpdateButton.addEventListener('click', () => {
+    restartUpdateButton.disabled = true;
+    run(window.browser.installUpdate().then(() => {
+      updateStatusLine.textContent = 'Closing Dino Browser to install the update…';
+    }).catch((error) => {
+      restartUpdateButton.disabled = false;
+      throw error;
+    }));
+  });
+  updateControls.append(updateStatusLine, checkUpdateButton, restartUpdateButton);
+  addSetting(
+    'Updates',
+    'Dino Browser checks for published releases and downloads them in the background. Restart only when you are ready to apply an update.',
+    updateControls,
+  );
+  window.browser.getUpdateStatus().then(renderUpdateStatus).catch(() => {});
   addSetting('Open-source credits', 'Built with Electron and Chromium. See the Electron and Chromium license notices in the installed application.');
 
   settingsDestination = previousDestination;
@@ -2782,6 +2839,7 @@ window.browser.onState((state) => {
 });
 window.browser.onLibrary(setLibrary);
 window.browser.onError(showToast);
+window.browser.onUpdateStatus(renderUpdateStatus);
 window.browser.getLibrary().then(setLibrary).catch((error) => {
   showToast(error.message || 'Browser data could not be loaded.');
 });

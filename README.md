@@ -4,7 +4,7 @@
   <p><strong>A lightweight Windows desktop browser built with Electron and Chromium.</strong></p>
   <p>
     <img src="https://img.shields.io/badge/platform-Windows-0078D4?logo=windows&logoColor=white" alt="Platform: Windows" />
-    <img src="https://img.shields.io/badge/version-1.0.4-5B6CFF" alt="Version 1.0.4" />
+    <img src="https://img.shields.io/badge/version-1.0.5-5B6CFF" alt="Version 1.0.5" />
     <img src="https://img.shields.io/badge/engine-Electron%20%2B%20Chromium-47848F?logo=electron&logoColor=white" alt="Electron and Chromium" />
   </p>
   <p>
@@ -25,7 +25,7 @@ Dino Browser brings everyday browsing into a focused desktop app: a custom tab b
 |---|---|
 | **Platform** | Windows desktop |
 | **Built with** | Electron and its bundled Chromium engine |
-| **Current version** | 1.0.4 |
+| **Current version** | 1.0.5 |
 | **Data storage** | Browser library encrypted with Windows DPAPI; website storage is temporary by default |
 | **Project status** | Early build; see the [manual QA checklist](MANUAL_QA.md) for verification status and known gaps |
 
@@ -65,7 +65,7 @@ Dino Browser brings everyday browsing into a focused desktop app: a custom tab b
 
 Read [PRIVACY.md](PRIVACY.md) for details, including what Shields does not protect against. Downloaded files and wallpaper image files themselves are not encrypted by the browser.
 
-## Install on Windows
+## Install and update on Windows
 
 Build the installer from a Windows checkout:
 
@@ -76,9 +76,15 @@ Build the installer from a Windows checkout:
    - Install dependencies: npm install
    - Build the installer: npm run build:win
 
-4. Launch the generated installer from the dist folder. For version 1.0.4, its name is Chromium-Browser-Setup-1.0.4.exe.
+4. Launch the generated installer from the dist folder. Version 1.0.5 is named `Chromium-Browser-Setup-1.0.5.exe`.
 
-The installer is configured for the current Windows user and adds a Desktop shortcut and Start menu entry; administrator access is not required.
+The installer is configured for the current Windows user and adds a Desktop shortcut and Start menu entry; administrator access is not required. Existing 1.0.4 installs need this one-time installer update because 1.0.4 did not include an updater.
+
+After 1.0.5 is installed, Dino Browser checks for public GitHub releases at startup and every six hours. Open **Settings → About** to check manually or see download progress. Updates download in the background; click **Restart to update** when ready to apply one. Closing the browser does not silently install a downloaded update.
+
+To publish a future Windows update, increment the `package.json` version, push a matching `v<version>` tag, and let [the Windows release workflow](.github/workflows/release-windows.yml) build and publish the installer. The updater requires a public, non-draft GitHub release so it can read the generated `latest.yml` metadata. Keep the installer name and app ID stable so updates replace the existing per-user install.
+
+**Signing:** Current installers are unsigned. Update downloads come from GitHub over HTTPS and electron-updater checks the downloaded asset against its SHA-512 release metadata, but the browser cannot authenticate a publisher identity with Authenticode until the project obtains and configures a Windows code-signing certificate.
 
 ## Develop and check
 
@@ -99,6 +105,7 @@ This is an early Electron browser build, and it does not implement every Chromiu
 - Extensions are experimental and limited to user-selected unpacked Manifest V2/V3 folders. There is no Chrome Web Store, CRX, extension action popup, or full Chrome extension API support.
 - Shields uses a small starter list. It does not include cosmetic filtering, scriptlets, fingerprint defenses, remote lists, or ABP/uBlock rule syntax.
 - Start-page bandwidth and time savings are estimates, not measurements.
+- Automatic updates require an installed, packaged build and a published GitHub release; `npm start` development runs do not update.
 
 See [MANUAL_QA.md](MANUAL_QA.md) for the broader gap list and outstanding manual checks.
 

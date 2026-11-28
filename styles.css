@@ -2465,9 +2465,28 @@ body.high-contrast {
 }
 
 .settings-section .setting-row:has(.theme-picker),
-.settings-section .setting-row:has(.accent-control) {
+.settings-section .setting-row:has(.accent-control),
+.settings-section .setting-row:has(.update-controls) {
   align-items: flex-start;
   flex-direction: column;
+}
+
+.update-controls {
+  display: flex;
+  width: 100%;
+  align-items: center;
+  flex-wrap: wrap;
+  gap: 9px;
+}
+
+.update-controls .update-status {
+  flex-basis: 100%;
+  margin: 0 0 3px;
+  color: var(--text-secondary);
+}
+
+.update-controls [hidden] {
+  display: none;
 }
 
 .settings-section .setting-row p {
