@@ -122,6 +122,6 @@
 
 - **Layering invariant:** Removed the unused browser, Shields, and extensions DOM popups and their render/update/Escape handlers, along with their obsolete markup and CSS. Toolbar actions now have only the native Electron menu route, which is rendered above page `WebContentsView`s. Shields and Extensions controls now describe their popup type as a menu. Updated the audit note to reflect the cleanup.
 - **Verification:** `npm test` **33 passed, 0 failed**; `npm run check:theme-contrast` **54 checks, 0 failures**; `node --check renderer.js` and `git diff --check` passed. A source search found no remaining obsolete popup nodes or selectors.
-- **Known limits:** Runtime checks for toolbar menu opening/closing, focus, and the toast above web content still need the installed app or a working dev runtime.
+- **Known limits:** Runtime checks for toolbar menu opening/closing, focus, and the toast above web content still need the installed app or a working dev runtime. Retried `npm start -- --enable-logging --v=1` with Electron 45.5.0 installed; it exits with code 1 and no diagnostic, so no rendered verification was possible.
 - **Next:** Continue Phase 5 with runtime and cross-surface QA where the environment permits; preserve unverified states as gaps.
 
