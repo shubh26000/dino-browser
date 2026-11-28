@@ -104,3 +104,10 @@
 - **Known limits:** Electron runtime remains unavailable, so sidebar rendering and responsive behavior still need visual confirmation in the running app.
 - **Next:** Continue Phase 4 with settings and internal-page empty states, then return to the remaining confirmation-dialog polish.
 
+## 2026-11-28 — Phase 4, batch 3: shared empty states
+
+- **Empty lists and results:** Added a shared, decorative inbox mark and centered message layout to empty history/bookmark/tab lists, settings search, and start-page widgets. The icon is hidden from assistive technology and message text remains ordinary readable text.
+- **Verification:** `npm test` **33 passed, 0 failed**; `npm run check:theme-contrast` **54 checks, 0 failures**; `node --check renderer.js` and `git diff --check` passed.
+- **Known limits:** The Downloads page remains an explicitly labeled placeholder because this build has no download manager. Full visual review still requires the Electron runtime to launch.
+- **Next:** Continue Phase 4 with confirmation flows and internal-page detail states.
+

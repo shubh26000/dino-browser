@@ -41,6 +41,7 @@ const ICONS = {
   reset: '<path d="M3 12a9 9 0 1 0 2.6-6.4L3 8"/><path d="M3 3v5h5m4-1v5l3 2"/>',
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/>',
   profile: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+  inbox: '<path d="M4 4h16l2 11v5H2v-5L4 4Z"/><path d="M2 15h5l2 3h6l2-3h5M8 9h8"/>',
 };
 
 const SETTINGS_SECTION_ICONS = {
@@ -451,7 +452,11 @@ function makePageHeading(title, description) {
 function makeEmptyState(message) {
   const empty = document.createElement('div');
   empty.className = 'empty-state';
-  empty.textContent = message;
+  const icon = makeIcon('inbox');
+  icon.classList.add('empty-state-icon');
+  const description = document.createElement('p');
+  description.textContent = message;
+  empty.append(icon, description);
   return empty;
 }
 
