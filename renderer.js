@@ -1488,7 +1488,7 @@ function renderShieldsButton() {
   if (!shieldsPopup.hidden) renderShieldsPopup();
 }
 
-function renderHistoryPage() {
+function renderHistoryPage(previousQuery = '', restoreSearchFocus = false) {
   internalPage.append(
     makePageHeading('History', 'Pages you have visited on this device.'),
   );
@@ -1497,6 +1497,7 @@ function renderHistoryPage() {
   const search = document.createElement('input');
   search.className = 'page-search';
   search.type = 'search';
+  search.value = previousQuery;
   search.placeholder = 'Search history';
   search.setAttribute('aria-label', 'Search history');
   const clear = document.createElement('button');
@@ -1519,7 +1520,29 @@ function renderHistoryPage() {
       return;
     }
 
+    const groups = new Map();
+    const today = new Date();
+    today.setHours(0, 0, 0, 0);
+    const yesterday = new Date(today);
+    yesterday.setDate(yesterday.getDate() - 1);
     for (const entry of entries) {
+      const visited = new Date(entry.visitedAt);
+      const day = new Date(visited);
+      day.setHours(0, 0, 0, 0);
+      const groupName = day.getTime() === today.getTime() ? 'Today'
+        : day.getTime() === yesterday.getTime() ? 'Yesterday'
+          : day.toLocaleDateString([], { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' });
+      if (!groups.has(groupName)) groups.set(groupName, []);
+      groups.get(groupName).push({ ...entry, visitedAt: visited });
+    }
+    for (const [groupName, groupedEntries] of groups) {
+      const group = document.createElement('section');
+      group.className = 'entry-day-group';
+      const heading = document.createElement('h2');
+      heading.className = 'entry-group-heading';
+      heading.textContent = groupName;
+      group.append(heading);
+      for (const entry of groupedEntries) {
       const row = document.createElement('article');
       row.className = 'entry-row';
       const open = document.createElement('button');
@@ -1529,45 +1552,64 @@ function renderHistoryPage() {
       open.addEventListener('click', () => run(window.browser.navigate(entry.url)));
       const details = document.createElement('p');
       details.className = 'entry-details';
-      details.textContent = `${entry.url} · ${new Date(entry.visitedAt).toLocaleString()}`;
+      details.textContent = `${entry.url} · ${entry.visitedAt.toLocaleTimeString([], { hour: 'numeric', minute: '2-digit' })}`;
       row.append(open, details);
-      list.append(row);
+      group.append(row);
+      }
+      list.append(group);
     }
   };
   search.addEventListener('input', renderEntries);
   renderEntries();
   internalPage.append(actions, list);
+  if (restoreSearchFocus) search.focus();
 }
 
-function renderBookmarksPage() {
+function renderBookmarksPage(previousQuery = '', restoreSearchFocus = false) {
   internalPage.append(
     makePageHeading('Bookmarks', 'Saved pages, ready when you are.'),
   );
+  const search = document.createElement('input');
+  search.className = 'page-search';
+  search.type = 'search';
+  search.value = previousQuery;
+  search.placeholder = 'Search bookmarks';
+  search.setAttribute('aria-label', 'Search bookmarks');
   const list = document.createElement('section');
   list.className = 'entry-list';
-  if (!library.bookmarks.length) {
-    list.append(makeEmptyState('No bookmarks yet. Select the star beside the address bar to save a page.'));
-  }
-  for (const bookmark of library.bookmarks) {
-    const row = document.createElement('article');
-    row.className = 'entry-row bookmark-row';
-    const open = document.createElement('button');
-    open.className = 'entry-open';
-    open.type = 'button';
-    open.textContent = bookmark.title;
-    open.addEventListener('click', () => run(window.browser.navigate(bookmark.url)));
-    const details = document.createElement('p');
-    details.className = 'entry-details';
-    details.textContent = bookmark.url;
-    const remove = document.createElement('button');
-    remove.className = 'secondary-button remove-bookmark';
-    remove.type = 'button';
-    remove.textContent = 'Remove';
-    remove.addEventListener('click', () => run(window.browser.removeBookmark(bookmark.id)));
-    row.append(open, details, remove);
-    list.append(row);
-  }
-  internalPage.append(list);
+  const renderEntries = () => {
+    list.replaceChildren();
+    const query = search.value.trim().toLowerCase();
+    const entries = library.bookmarks.filter((bookmark) => `${bookmark.title} ${bookmark.url}`.toLowerCase().includes(query));
+    if (!entries.length) {
+      list.append(makeEmptyState(query ? 'No matching bookmarks.' : 'No bookmarks yet. Select the star beside the address bar to save a page.'));
+      return;
+    }
+    for (const bookmark of entries) {
+      const row = document.createElement('article');
+      row.className = 'entry-row bookmark-row';
+      const open = document.createElement('button');
+      open.className = 'entry-open';
+      open.type = 'button';
+      open.textContent = bookmark.title;
+      open.addEventListener('click', () => run(window.browser.navigate(bookmark.url)));
+      const details = document.createElement('p');
+      details.className = 'entry-details';
+      details.textContent = bookmark.url;
+      const remove = document.createElement('button');
+      remove.className = 'secondary-button remove-bookmark';
+      remove.type = 'button';
+      remove.textContent = 'Remove';
+      remove.setAttribute('aria-label', `Remove bookmark ${bookmark.title}`);
+      remove.addEventListener('click', () => run(window.browser.removeBookmark(bookmark.id)));
+      row.append(open, details, remove);
+      list.append(row);
+    }
+  };
+  search.addEventListener('input', renderEntries);
+  renderEntries();
+  internalPage.append(search, list);
+  if (restoreSearchFocus) search.focus();
 }
 
 function addSetting(title, description, control, destination = settingsDestination || internalPage) {
@@ -1716,12 +1758,34 @@ function createSettingsSection(nav, content, id, title, description) {
   navButton.textContent = title;
   navButton.setAttribute('aria-controls', section.id);
   navButton.setAttribute('aria-current', 'false');
+  navButton.tabIndex = nav.querySelector('.settings-nav-link') ? -1 : 0;
   navButton.addEventListener('click', () => {
-    nav.querySelectorAll('.settings-nav-link').forEach((button) => button.setAttribute('aria-current', String(button === navButton)));
+    setSettingsNavActive(nav, navButton);
     section.scrollIntoView({ behavior: document.body.classList.contains('reduce-motion') ? 'instant' : 'smooth', block: 'start' });
+  });
+  navButton.addEventListener('keydown', (event) => {
+    const buttons = [...nav.querySelectorAll('.settings-nav-link:not([hidden])')];
+    const index = buttons.indexOf(navButton);
+    let nextIndex;
+    if (event.key === 'ArrowDown') nextIndex = Math.min(buttons.length - 1, index + 1);
+    else if (event.key === 'ArrowUp') nextIndex = Math.max(0, index - 1);
+    else if (event.key === 'Home') nextIndex = 0;
+    else if (event.key === 'End') nextIndex = buttons.length - 1;
+    else return;
+    event.preventDefault();
+    buttons[nextIndex]?.focus();
+    buttons[nextIndex]?.click();
   });
   nav.append(navButton);
   return { section, navButton };
+}
+
+function setSettingsNavActive(nav, activeButton) {
+  nav.querySelectorAll('.settings-nav-link').forEach((button) => {
+    const active = button === activeButton;
+    button.setAttribute('aria-current', String(active));
+    button.tabIndex = active ? 0 : -1;
+  });
 }
 
 function setHighlightedText(element, source, terms) {
@@ -1766,6 +1830,11 @@ function filterSettings(query, content, nav, noResults) {
     matches += sectionMatches;
   }
   noResults.hidden = matches > 0;
+  const current = nav.querySelector('.settings-nav-link[aria-current="true"]');
+  if (current?.hidden) {
+    const firstVisible = nav.querySelector('.settings-nav-link:not([hidden])');
+    if (firstVisible) setSettingsNavActive(nav, firstVisible);
+  }
 }
 
 function renderSettingsPage() {
@@ -2020,7 +2089,7 @@ function renderSettingsPage() {
 
   settingsDestination = previousDestination;
   const firstNav = nav.querySelector('.settings-nav-link');
-  firstNav?.setAttribute('aria-current', 'true');
+  if (firstNav) setSettingsNavActive(nav, firstNav);
   search.addEventListener('input', () => filterSettings(search.value, content, nav, noResults));
 }
 
@@ -2124,13 +2193,19 @@ function renderShieldsSettingsPage() {
   internalPage.append(reset);
 }
 
-function renderInternalPage(page) {
-  if (page !== 'home') window.clearInterval(clockTimer);
+function renderInternalPage(page, preserveSearch = false) {
+  const previousSearch = preserveSearch ? internalPage.querySelector('.page-search') : null;
+  const searchQuery = previousSearch?.value || '';
+  const restoreSearchFocus = Boolean(previousSearch && document.activeElement === previousSearch);
+  if (page !== 'home') {
+    window.clearInterval(clockTimer);
+    window.clearInterval(wallpaperTimer);
+  }
   internalPage.replaceChildren();
   internalPage.classList.toggle('home-page', page === 'home');
   if (page === 'home') renderHomePage();
-  else if (page === 'history') renderHistoryPage();
-  else if (page === 'bookmarks') renderBookmarksPage();
+  else if (page === 'history') renderHistoryPage(searchQuery, restoreSearchFocus);
+  else if (page === 'bookmarks') renderBookmarksPage(searchQuery, restoreSearchFocus);
   else if (page === 'settings') renderSettingsPage();
   else if (page === 'shields') renderShieldsSettingsPage();
   else if (page === 'extensions') renderExtensionsPage();
@@ -2670,7 +2745,7 @@ function setLibrary(data) {
         : browserState.internalPage === 'extensions' ? changedExtensions
         : false;
   if (pageNeedsRefresh) {
-    renderInternalPage(browserState.internalPage);
+    renderInternalPage(browserState.internalPage, true);
   }
   if (browserState.internalPage === 'settings' && changedSettings) syncSettingsControls();
   if (browserState.internalPage === 'home' && changedStartPageDisplay) {

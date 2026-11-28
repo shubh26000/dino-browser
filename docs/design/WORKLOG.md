@@ -89,3 +89,11 @@
 - **Phase 3 gaps:** No real favicons are loaded; shortcut tiles use readable local letter tiles to honor the no-remote-assets rule. Widget data loads synchronously from local storage, so loading skeletons and remote error/retry states are not applicable yet. Full visual review, reduced-motion rendering, and performance measurements are pending an Electron runtime that opens successfully.
 - **Next:** Begin Phase 4 settings and internal-page polish, then Phase 5 cross-surface QA. Preserve these runtime and screenshot limitations in every report until resolved.
 
+## 2026-11-28 — Phase 4, batch 1: settings navigation and internal lists
+
+- **Settings navigation:** Added a motion-aware active marker and roving keyboard navigation with Up/Down/Home/End. Filtering moves the active section to the first visible result if the previous section disappears.
+- **History and bookmarks:** History is grouped under sticky day headings. Bookmarks now have local title/URL search. Search query and focus persist when local data changes and the page rerenders. Remove buttons have item-specific accessible names.
+- **Verification:** `npm test` **33 passed, 0 failed**; `npm run check:theme-contrast` **54 checks, 0 failures**; `node --check renderer.js` and `git diff --check` passed.
+- **Known limits:** Rendered keyboard/screen-reader checks and screenshot evidence require a working Electron runtime. Multi-select rows and custom icons remain for a later pass.
+- **Next:** Continue Phase 4 with internal-page empty states, settings controls, and confirmation dialogs.
+
