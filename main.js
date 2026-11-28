@@ -26,6 +26,8 @@ const {
 } = require('./navigation');
 
 const UI_URL = pathToFileURL(path.join(__dirname, 'index.html')).href;
+const THEME_GALLERY_URL = pathToFileURL(path.join(__dirname, 'docs', 'design', 'theme-gallery.html')).href;
+const SHOW_THEME_GALLERY = process.argv.includes('--theme-gallery') && !app.isPackaged;
 const BOOKMARK_IMPORT_MAX_BYTES = 10 * 1024 * 1024;
 const INTERNAL_PAGES = new Set(['home', 'history', 'bookmarks', 'settings', 'shields', 'extensions', 'tab-search', 'downloads']);
 let BROWSER_SESSION_PARTITION = 'browser-session';
@@ -54,8 +56,13 @@ function getToolbarHeight() {
 
 function getWindowBackgroundColor() {
   const theme = store?.state.settings.theme || 'system';
-  const useDark = theme === 'dark' || (theme === 'system' && nativeTheme.shouldUseDarkColors);
-  return useDark ? '#08090c' : '#f2f4f8';
+  if (['night', 'aurora', 'ember', 'green', 'dark'].includes(theme)) {
+    return ({
+      night: '#0b0f17', dark: '#0b0f17', aurora: '#0a1418', ember: '#15101a', green: '#0e1311',
+    })[theme];
+  }
+  const useDark = theme === 'system' && nativeTheme.shouldUseDarkColors;
+  return useDark ? '#0b0f17' : '#eef1f7';
 }
 
 function syncBackgroundColor() {
@@ -1367,7 +1374,7 @@ function createWindow() {
     autoHideMenuBar: true,
     backgroundColor: getWindowBackgroundColor(),
     webPreferences: {
-      preload: path.join(__dirname, 'preload.js'),
+      ...(SHOW_THEME_GALLERY ? {} : { preload: path.join(__dirname, 'preload.js') }),
       contextIsolation: true,
       nodeIntegration: false,
       sandbox: true,
@@ -1377,19 +1384,23 @@ function createWindow() {
 
   browserWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   browserWindow.webContents.on('will-navigate', (event, url) => {
-    if (!isTrustedUiUrl(url, UI_URL)) {
+    if (!isTrustedUiUrl(url, UI_URL) && !(SHOW_THEME_GALLERY && url === THEME_GALLERY_URL)) {
       event.preventDefault();
       console.warn('Blocked navigation away from the trusted browser UI:', url);
     }
   });
   browserWindow.webContents.on('will-redirect', (event, url) => {
-    if (!isTrustedUiUrl(url, UI_URL)) {
+    if (!isTrustedUiUrl(url, UI_URL) && !(SHOW_THEME_GALLERY && url === THEME_GALLERY_URL)) {
       event.preventDefault();
       console.warn('Blocked redirect away from the trusted browser UI:', url);
     }
   });
-  browserWindow.loadFile(path.join(__dirname, 'index.html'));
-  browserWindow.webContents.on('before-input-event', (event, input) => handleShortcut(event, input, browserWindow.webContents));
+  browserWindow.loadFile(SHOW_THEME_GALLERY
+    ? path.join(__dirname, 'docs', 'design', 'theme-gallery.html')
+    : path.join(__dirname, 'index.html'));
+  if (!SHOW_THEME_GALLERY) {
+    browserWindow.webContents.on('before-input-event', (event, input) => handleShortcut(event, input, browserWindow.webContents));
+  }
   browserWindow.webContents.on('context-menu', (_event, params) => showPageContextMenu(browserWindow.webContents, params));
   browserWindow.webContents.on('found-in-page', (_event, result) => {
     browserWindow.webContents.send('browser:find-result', {
@@ -1426,6 +1437,7 @@ function createWindow() {
     }
   });
   browserWindow.webContents.once('did-finish-load', () => {
+    if (SHOW_THEME_GALLERY) return;
     sendLibrary();
     const savedSession = store.state.lastSession;
     if (store.state.settings.startupBehavior === 'continue' && savedSession.tabs.length) {

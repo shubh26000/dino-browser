@@ -6,6 +6,8 @@
   "main": "main.js",
   "scripts": {
     "start": "electron .",
+    "theme-gallery": "electron . --theme-gallery",
+    "check:theme-contrast": "node docs/design/check-theme-contrast.js",
     "build:win": "electron-builder --win nsis",
     "test": "node --test"
   },
@@ -25,6 +27,7 @@
       "shields.js",
       "index.html",
       "styles.css",
+      "tokens.css",
       "navigation.js",
       "assets/**",
       "MANUAL_QA.md",

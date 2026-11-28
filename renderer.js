@@ -61,9 +61,12 @@ let library = {
   bookmarks: [],
   settings: {
     searchEngine: 'google',
-    theme: 'system',
+    theme: 'night',
     accent: '#496fe8',
+    accentMode: 'theme',
     density: 'comfortable',
+    roundness: 'default',
+    reduceEffects: false,
     shieldsEnabled: true,
     adsBlocking: true,
     trackersBlocking: true,
@@ -1386,13 +1389,51 @@ function renderSettingsPage() {
   addSetting('Startup behavior', 'Choose whether to open the start page or restore your previous web tabs.', startupBehavior);
 
   section('appearance', 'Appearance', 'Set the browser frame and start page look.');
-  const theme = makeSelect(
-    [['system', 'System default'], ['light', 'Light'], ['dark', 'Dark']],
-    library.settings.theme,
-    (value) => saveSetting({ theme: value }),
-  );
-  theme.dataset.settingKey = 'theme';
-  addSetting('Theme', 'Choose a light or dark browser, or follow Windows.', theme);
+  const themePicker = document.createElement('div');
+  themePicker.className = 'theme-picker';
+  themePicker.dataset.settingKey = 'theme';
+  themePicker.setAttribute('role', 'group');
+  themePicker.setAttribute('aria-label', 'Color theme');
+  const selectedTheme = library.settings.theme === 'light' ? 'daylight' : library.settings.theme === 'dark' ? 'night' : library.settings.theme;
+  const themes = [
+    ['system', 'System', 'Follow Windows appearance'],
+    ['daylight', 'Daylight', 'A clear light palette'],
+    ['night', 'Dino Night', 'A calm violet night palette'],
+    ['aurora', 'Aurora', 'Teal and indigo'],
+    ['ember', 'Ember', 'Warm coral and gold'],
+    ['green', 'Dino Green', 'Fresh green accents'],
+    ['high-contrast', 'High contrast', 'Strong black and white contrast'],
+  ];
+  for (const [value, label, description] of themes) {
+    const button = document.createElement('button');
+    button.className = `theme-card theme-card-${value}`;
+    button.type = 'button';
+    button.dataset.themeOption = value;
+    button.setAttribute('aria-pressed', String(selectedTheme === value));
+    button.setAttribute('aria-label', `${label}. ${description}`);
+    const preview = document.createElement('span');
+    preview.className = `theme-preview${value === 'system' ? ' theme-preview-system' : ` palette-${value === 'high-contrast' ? 'night' : value}`}`;
+    preview.setAttribute('aria-hidden', 'true');
+    const miniTabs = document.createElement('span');
+    miniTabs.className = 'theme-preview-tabs';
+    const miniToolbar = document.createElement('span');
+    miniToolbar.className = 'theme-preview-toolbar';
+    const miniPage = document.createElement('span');
+    miniPage.className = 'theme-preview-page';
+    const miniAccent = document.createElement('span');
+    miniAccent.className = 'theme-preview-accent';
+    miniPage.append(miniAccent);
+    preview.append(miniTabs, miniToolbar, miniPage);
+    const text = document.createElement('span');
+    text.className = 'theme-card-label';
+    text.textContent = label;
+    button.append(preview, text);
+    button.addEventListener('click', () => {
+      run(saveSetting({ theme: value }));
+    });
+    themePicker.append(button);
+  }
+  addSetting('Color theme', 'Preview and apply a palette. System follows Windows light or dark mode.', themePicker);
   const density = makeSelect(
     [['comfortable', 'Comfortable'], ['compact', 'Compact']],
     library.settings.density,
@@ -1411,8 +1452,8 @@ function renderSettingsPage() {
     swatch.style.setProperty('--swatch-color', accent);
     swatch.dataset.accentValue = accent;
     swatch.setAttribute('aria-label', `Set accent color ${accent}`);
-    swatch.setAttribute('aria-pressed', String(library.settings.accent.toLowerCase() === accent));
-    swatch.addEventListener('click', () => run(saveSetting({ accent })));
+    swatch.setAttribute('aria-pressed', String(library.settings.accentMode === 'custom' && library.settings.accent.toLowerCase() === accent));
+    swatch.addEventListener('click', () => run(saveSetting({ accent, accentMode: 'custom' })));
     swatches.append(swatch);
   }
   const accentHex = document.createElement('input');
@@ -1432,11 +1473,33 @@ function renderSettingsPage() {
       return;
     }
     accentHex.removeAttribute('aria-invalid');
-    run(saveSetting({ accent: accentHex.value }));
+    run(saveSetting({ accent: accentHex.value, accentMode: 'custom' }));
   });
-  accentControl.append(swatches, accentHex);
-  addSetting('Accent color', 'Personalize buttons, focus rings, and selected controls.', accentControl);
+  const paletteAccent = document.createElement('button');
+  paletteAccent.className = 'secondary-button theme-accent-reset';
+  paletteAccent.type = 'button';
+  paletteAccent.textContent = 'Use theme accent';
+  paletteAccent.dataset.accentModeOption = 'theme';
+  paletteAccent.setAttribute('aria-pressed', String(library.settings.accentMode === 'theme'));
+  paletteAccent.addEventListener('click', () => run(saveSetting({ accentMode: 'theme' })));
+  const wallpaperAccent = document.createElement('button');
+  wallpaperAccent.className = 'secondary-button theme-accent-reset';
+  wallpaperAccent.type = 'button';
+  wallpaperAccent.textContent = 'Use wallpaper color';
+  wallpaperAccent.dataset.accentModeOption = 'wallpaper';
+  wallpaperAccent.setAttribute('aria-pressed', String(library.settings.accentMode === 'wallpaper'));
+  wallpaperAccent.addEventListener('click', () => run(setWallpaperAccentMode()));
+  accentControl.append(swatches, accentHex, paletteAccent, wallpaperAccent);
+  addSetting('Accent color', 'Choose a custom accent, use the theme default, or sample your local wallpaper.', accentControl);
   toggleSetting('ambient', 'Ambient glow', library.settings.ambient, 'Show a soft animated color glow around the toolbar.');
+  toggleSetting('reduceEffects', 'Reduce effects', library.settings.reduceEffects, 'Turn off blur, glow, and heavy shadows.');
+  const roundness = makeSelect(
+    [['sharp', 'Sharp'], ['default', 'Default'], ['round', 'Round']],
+    library.settings.roundness,
+    (value) => saveSetting({ roundness: value }),
+  );
+  roundness.dataset.settingKey = 'roundness';
+  addSetting('Corner roundness', 'Adjust the shape of controls and cards.', roundness);
   toggleSetting('showBookmarksBar', 'Bookmarks bar', library.settings.showBookmarksBar, 'Show or hide the bookmarks bar below the toolbar.');
   buttonSetting('Start page', 'Choose wallpaper, shortcuts, and local widgets.', 'Open start page', () => run(window.browser.openInternal('home')));
   addUnavailableSetting('Tab strip and toolbar buttons', 'Vertical tabs, button visibility, and hover cards are not implemented yet.');
@@ -1475,7 +1538,7 @@ function renderSettingsPage() {
   addUnavailableSetting('Download location and prompts', 'Download management, save-location prompts, and open-after-download rules are not implemented.');
 
   section('accessibility', 'Accessibility', 'Motion and keyboard visibility.');
-  toggleSetting('reduceMotion', 'Reduce motion', library.settings.reduceMotion, 'Reduce browser UI animation, including the start-page drawer.');
+  toggleSetting('reduceMotion', 'Reduce motion', library.settings.reduceMotion, 'Reduce browser UI animation. Motion is also reduced when Windows requests it.');
   toggleSetting('highContrast', 'High contrast', library.settings.highContrast, 'Use strong text and control contrast for the browser interface.');
   addSetting('Keyboard focus', 'Browser controls keep a visible focus ring. Caret browsing is not available.');
 
@@ -1976,31 +2039,135 @@ function getTabSearchSignature() {
   });
 }
 
-function applyAppearance() {
+function applyAppearance(animate = false) {
   const settings = library.settings;
-  const useDark = settings.theme === 'dark'
-    || (settings.theme === 'system' && window.matchMedia('(prefers-color-scheme: dark)').matches);
+  const systemDark = window.matchMedia('(prefers-color-scheme: dark)').matches;
+  const requestedTheme = settings.theme;
+  const resolvedTheme = requestedTheme === 'system'
+    ? (systemDark ? 'night' : 'daylight')
+    : requestedTheme === 'dark' ? 'night' : requestedTheme === 'light' ? 'daylight' : requestedTheme;
+  const useDark = ['night', 'aurora', 'ember', 'green'].includes(resolvedTheme)
+    || (resolvedTheme === 'high-contrast' && systemDark);
+  const highContrast = settings.highContrast || resolvedTheme === 'high-contrast';
+  for (const name of ['daylight', 'night', 'aurora', 'ember', 'green']) {
+    document.body.classList.toggle(`palette-${name}`, resolvedTheme === name);
+  }
   document.body.classList.toggle('theme-dark', useDark);
   document.body.classList.toggle('ambient-off', !settings.ambient);
   document.body.classList.toggle('density-compact', settings.density === 'compact');
-  document.body.classList.toggle('reduce-motion', Boolean(settings.reduceMotion));
-  document.body.classList.toggle('high-contrast', Boolean(settings.highContrast));
-  const accent = settings.highContrast ? (useDark ? '#ffeb3b' : '#001fbb') : settings.accent;
-  document.body.style.setProperty('--accent', accent);
-  document.body.style.setProperty('--accent-hover', `color-mix(in srgb, ${accent} 88%, #101a38)`);
-  document.body.style.setProperty('--accent-soft', `color-mix(in srgb, ${accent} 12%, transparent)`);
+  document.body.classList.toggle('reduce-motion', Boolean(settings.reduceMotion) || window.matchMedia('(prefers-reduced-motion: reduce)').matches);
+  document.body.classList.toggle('reduce-effects', Boolean(settings.reduceEffects));
+  document.body.classList.toggle('roundness-sharp', settings.roundness === 'sharp');
+  document.body.classList.toggle('roundness-round', settings.roundness === 'round');
+  document.body.classList.toggle('high-contrast', Boolean(highContrast));
+  if (!highContrast && settings.accentMode !== 'theme') {
+    document.body.style.setProperty('--accent', settings.accent);
+    document.body.style.setProperty('--text-on-accent', textColorForAccent(settings.accent));
+    document.body.style.setProperty('--accent-hover', `color-mix(in srgb, ${settings.accent} 88%, ${useDark ? '#080d16' : '#263552'})`);
+    document.body.style.setProperty('--accent-soft', `color-mix(in srgb, ${settings.accent} 16%, transparent)`);
+  } else {
+    document.body.style.removeProperty('--accent');
+    document.body.style.removeProperty('--text-on-accent');
+    document.body.style.removeProperty('--accent-hover');
+    document.body.style.removeProperty('--accent-soft');
+  }
+  if (animate && !document.body.classList.contains('reduce-motion')) {
+    document.body.classList.add('theme-transition');
+    window.setTimeout(() => document.body.classList.remove('theme-transition'), 240);
+  }
 }
+
+function wallpaperAccentFromRgb(red, green, blue) {
+  const r = red / 255, g = green / 255, b = blue / 255;
+  const max = Math.max(r, g, b), min = Math.min(r, g, b), delta = max - min;
+  let hue = 0;
+  if (delta) {
+    if (max === r) hue = ((g - b) / delta) % 6;
+    else if (max === g) hue = (b - r) / delta + 2;
+    else hue = (r - g) / delta + 4;
+  }
+  hue = (hue * 60 + 360) % 360;
+  const saturation = Math.min(.76, Math.max(.48, delta));
+  const lightness = .55;
+  const chroma = (1 - Math.abs(2 * lightness - 1)) * saturation;
+  const section = hue / 60;
+  const second = chroma * (1 - Math.abs(section % 2 - 1));
+  let channels;
+  if (section < 1) channels = [chroma, second, 0];
+  else if (section < 2) channels = [second, chroma, 0];
+  else if (section < 3) channels = [0, chroma, second];
+  else if (section < 4) channels = [0, second, chroma];
+  else if (section < 5) channels = [second, 0, chroma];
+  else channels = [chroma, 0, second];
+  const match = lightness - chroma / 2;
+  return `#${channels.map((channel) => Math.round((channel + match) * 255).toString(16).padStart(2, '0')).join('')}`;
+}
+
+function textColorForAccent(hex) {
+  const channels = hex.match(/[a-f\d]{2}/gi).map((value) => parseInt(value, 16) / 255);
+  const luminance = channels
+    .map((value) => value <= .04045 ? value / 12.92 : ((value + .055) / 1.055) ** 2.4)
+    .reduce((sum, value, index) => sum + value * [.2126, .7152, .0722][index], 0);
+  const whiteContrast = 1.05 / (luminance + .05);
+  const darkContrast = (luminance + .05) / .054;
+  return whiteContrast >= darkContrast ? '#ffffff' : '#101522';
+}
+
+async function updateWallpaperAccent() {
+  const wallpaper = library.startPage;
+  const builtInAccents = { aurora: '#45cfc1', sunset: '#fb8761', forest: '#57bd79', ocean: '#45a7dc', dune: '#d49a56' };
+  let accent = builtInAccents[wallpaper.wallpaper] || '#7b6cff';
+  if (wallpaper.wallpaper === 'custom' && wallpaper.wallpaperUrl?.startsWith('file:')) {
+    try {
+      const image = new Image();
+      image.src = wallpaper.wallpaperUrl;
+      await image.decode();
+      const canvas = document.createElement('canvas');
+      canvas.width = 24;
+      canvas.height = 24;
+      const context = canvas.getContext('2d', { willReadFrequently: true });
+      context.drawImage(image, 0, 0, 24, 24);
+      const pixels = context.getImageData(0, 0, 24, 24).data;
+      let red = 0, green = 0, blue = 0, samples = 0;
+      for (let index = 0; index < pixels.length; index += 16) {
+        red += pixels[index];
+        green += pixels[index + 1];
+        blue += pixels[index + 2];
+        samples += 1;
+      }
+      if (samples) accent = wallpaperAccentFromRgb(red / samples, green / samples, blue / samples);
+    } catch (error) {
+      console.warn('Could not sample the local wallpaper; keeping the current accent.', error);
+      return;
+    }
+  }
+  if (accent !== library.settings.accent) await window.browser.updateSettings({ accent });
+}
+
+async function setWallpaperAccentMode() {
+  await saveSetting({ accentMode: 'wallpaper' });
+  await updateWallpaperAccent();
+}
+
+window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', () => {
+  if (library.settings.theme === 'system' || library.settings.theme === 'high-contrast') applyAppearance(true);
+});
+window.matchMedia('(prefers-reduced-motion: reduce)').addEventListener('change', () => applyAppearance());
 
 function setLibrary(data) {
   const previousLibrary = library;
   library = data;
-  applyAppearance();
+  applyAppearance(previousLibrary.settings.theme !== library.settings.theme);
   renderBookmarksBar();
   updatePrivacyStats();
   renderShieldsButton();
   const changedHistory = JSON.stringify(previousLibrary.history) !== JSON.stringify(library.history);
   const changedBookmarks = JSON.stringify(previousLibrary.bookmarks) !== JSON.stringify(library.bookmarks);
   const changedSettings = JSON.stringify(previousLibrary.settings) !== JSON.stringify(library.settings);
+  if (library.settings.accentMode === 'wallpaper' && (
+    previousLibrary.startPage?.wallpaper !== library.startPage.wallpaper
+    || previousLibrary.startPage?.wallpaperUrl !== library.startPage.wallpaperUrl
+  )) void updateWallpaperAccent();
   const changedExtensions = JSON.stringify(previousLibrary.extensions) !== JSON.stringify(library.extensions)
     || previousLibrary.extensionSupportRestartRequired !== library.extensionSupportRestartRequired;
   const startPageDisplay = (startPage) => startPage && JSON.stringify({
@@ -2043,7 +2210,14 @@ function syncSettingsControls() {
     else if (value !== undefined) control.value = value;
   });
   page.querySelectorAll('[data-accent-value]').forEach((control) => {
-    control.setAttribute('aria-pressed', String(library.settings.accent.toLowerCase() === control.dataset.accentValue));
+    control.setAttribute('aria-pressed', String(library.settings.accentMode === 'custom' && library.settings.accent.toLowerCase() === control.dataset.accentValue));
+  });
+  page.querySelectorAll('[data-accent-mode-option]').forEach((control) => {
+    control.setAttribute('aria-pressed', String(library.settings.accentMode === control.dataset.accentModeOption));
+  });
+  const selectedTheme = library.settings.theme === 'light' ? 'daylight' : library.settings.theme === 'dark' ? 'night' : library.settings.theme;
+  page.querySelectorAll('[data-theme-option]').forEach((control) => {
+    control.setAttribute('aria-pressed', String(control.dataset.themeOption === selectedTheme));
   });
 }
 
@@ -2063,7 +2237,6 @@ window.browser.onError(showToast);
 window.browser.getLibrary().then(setLibrary).catch((error) => {
   showToast(error.message || 'Browser data could not be loaded.');
 });
-window.matchMedia('(prefers-color-scheme: dark)').addEventListener('change', applyAppearance);
 
 window.browser.onFocusAddress(() => {
   addressInput.focus();

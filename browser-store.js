@@ -7,7 +7,7 @@ const HISTORY_LIMIT = 1000;
 const BOOKMARK_LIMIT = 500;
 const ENCRYPTED_FILE_HEADER = 'ChromiumBrowserEncrypted:v1\n';
 const SEARCH_ENGINES = new Set(['google', 'bing', 'duckduckgo']);
-const THEMES = new Set(['system', 'light', 'dark']);
+const THEMES = new Set(['system', 'light', 'dark', 'daylight', 'night', 'aurora', 'ember', 'green', 'high-contrast']);
 const START_PAGE_WALLPAPERS = new Set(['aurora', 'sunset', 'forest', 'ocean', 'dune', 'custom']);
 const START_PAGE_WIDGETS = new Set(['quote', 'bookmarks', 'recent', 'todo', 'notes']);
 
@@ -18,9 +18,12 @@ function defaultState() {
     settings: {
       searchEngine: 'google',
       profileName: 'Personal',
-      theme: 'system',
+      theme: 'night',
       accent: '#496fe8',
+      accentMode: 'theme',
       density: 'comfortable',
+      roundness: 'default',
+      reduceEffects: false,
       ambient: true,
       shieldsEnabled: true,
       adsBlocking: true,
@@ -381,8 +384,14 @@ class BrowserStore {
         next.theme = value;
       } else if (key === 'accent' && typeof value === 'string' && /^#[0-9a-fA-F]{6}$/.test(value)) {
         next.accent = value.toLowerCase();
+      } else if (key === 'accentMode' && ['theme', 'custom', 'wallpaper'].includes(value)) {
+        next.accentMode = value;
       } else if (key === 'density' && ['comfortable', 'compact'].includes(value)) {
         next.density = value;
+      } else if (key === 'roundness' && ['sharp', 'default', 'round'].includes(value)) {
+        next.roundness = value;
+      } else if (key === 'reduceEffects' && typeof value === 'boolean') {
+        next.reduceEffects = value;
       } else if (key === 'shieldsEnabled' && typeof value === 'boolean') {
         next.shieldsEnabled = value;
       } else if ((key === 'adsBlocking' || key === 'trackersBlocking') && typeof value === 'boolean') {
@@ -548,7 +557,10 @@ function parseState(text) {
     throw new TypeError('Saved browser settings are invalid.');
   }
   const accent = saved.settings.accent ?? '#496fe8';
+  const accentMode = saved.settings.accentMode ?? (accent.toLowerCase() === '#496fe8' ? 'theme' : 'custom');
   const density = saved.settings.density ?? 'comfortable';
+  const roundness = saved.settings.roundness ?? 'default';
+  const reduceEffects = saved.settings.reduceEffects ?? false;
   const shieldsEnabled = saved.settings.shieldsEnabled ?? true;
   const adsBlocking = saved.settings.adsBlocking ?? true;
   const trackersBlocking = saved.settings.trackersBlocking ?? true;
@@ -573,7 +585,10 @@ function parseState(text) {
     || !THEMES.has(saved.settings.theme)
     || typeof accent !== 'string'
     || !/^#[0-9a-fA-F]{6}$/.test(accent)
+    || !['theme', 'custom', 'wallpaper'].includes(accentMode)
     || !['comfortable', 'compact'].includes(density)
+    || !['sharp', 'default', 'round'].includes(roundness)
+    || typeof reduceEffects !== 'boolean'
     || typeof shieldsEnabled !== 'boolean'
     || typeof adsBlocking !== 'boolean'
     || typeof trackersBlocking !== 'boolean'
@@ -637,7 +652,10 @@ function parseState(text) {
       profileName,
       theme: saved.settings.theme,
       accent: accent.toLowerCase(),
+      accentMode,
       density,
+      roundness,
+      reduceEffects,
       ambient: saved.settings.ambient,
       shieldsEnabled,
       adsBlocking,

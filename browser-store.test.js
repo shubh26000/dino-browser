@@ -128,7 +128,7 @@ test('caps saved history to the most recent 1000 unique pages', () => {
 test('rejects unsupported settings instead of persisting unsafe values', () => {
   const store = new BrowserStore(path.join(os.tmpdir(), 'unused-settings.json'));
   assert.throws(() => store.updateSettings({ theme: 'custom-url' }), /Invalid browser setting/);
-  assert.equal(store.snapshot().settings.theme, 'system');
+  assert.equal(store.snapshot().settings.theme, 'night');
 });
 
 test('persists accent color and density while rejecting malformed values', async (context) => {
@@ -139,14 +139,26 @@ test('persists accent color and density while rejecting malformed values', async
   const store = new BrowserStore(filePath, encryption);
   await store.load();
 
-  store.updateSettings({ accent: '#AABBCC', density: 'compact' });
+  store.updateSettings({
+    theme: 'aurora', accent: '#AABBCC', accentMode: 'custom', density: 'compact',
+    roundness: 'round', reduceEffects: true,
+  });
   await store.save();
 
   const loaded = await new BrowserStore(filePath, encryption).load();
   assert.equal(loaded.settings.accent, '#aabbcc');
+  assert.equal(loaded.settings.theme, 'aurora');
+  assert.equal(loaded.settings.accentMode, 'custom');
   assert.equal(loaded.settings.density, 'compact');
+  assert.equal(loaded.settings.roundness, 'round');
+  assert.equal(loaded.settings.reduceEffects, true);
   assert.throws(() => store.updateSettings({ accent: 'red' }), /Invalid browser setting/);
   assert.throws(() => store.updateSettings({ density: 'dense' }), /Invalid browser setting/);
+  assert.throws(() => store.updateSettings({ theme: 'neon' }), /Invalid browser setting/);
+  assert.throws(() => store.updateSettings({ roundness: 'wobbly' }), /Invalid browser setting/);
+  store.updateSettings({ accentMode: 'wallpaper' });
+  assert.equal(store.snapshot().settings.accentMode, 'wallpaper');
+  assert.throws(() => store.updateSettings({ accentMode: 'remote-image' }), /Invalid browser setting/);
 });
 
 test('persists Shields controls and validates site exceptions', async (context) => {
@@ -311,7 +323,10 @@ test('fills appearance defaults when loading settings saved by an older version'
 
   const loaded = await new BrowserStore(encryptedPath, makeEncryption(), legacyPath).load();
   assert.equal(loaded.settings.accent, '#496fe8');
+  assert.equal(loaded.settings.accentMode, 'theme');
   assert.equal(loaded.settings.density, 'comfortable');
+  assert.equal(loaded.settings.roundness, 'default');
+  assert.equal(loaded.settings.reduceEffects, false);
   assert.equal(loaded.settings.shieldsEnabled, true);
   assert.equal(loaded.settings.httpsFirst, true);
   assert.equal(loaded.settings.urlCleaning, true);
