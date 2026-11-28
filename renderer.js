@@ -6,15 +6,12 @@ const forwardButton = document.querySelector('#forward');
 const bookmarkButton = document.querySelector('#bookmark');
 const shieldsButton = document.querySelector('#shields-button');
 const shieldsCount = document.querySelector('#shields-count');
-const shieldsPopup = document.querySelector('#shields-popup');
 const extensionsButton = document.querySelector('#extensions-button');
-const extensionsPopup = document.querySelector('#extensions-popup');
 const findBar = document.querySelector('#find-bar');
 const findQuery = document.querySelector('#find-query');
 const findCount = document.querySelector('#find-count');
 const findMatchCase = document.querySelector('#find-match-case');
 const menuButton = document.querySelector('#browser-menu-button');
-const menu = document.querySelector('#browser-menu');
 const internalPage = document.querySelector('#internal-page');
 const bookmarksBar = document.querySelector('#bookmarks-bar');
 const toast = document.querySelector('#toast');
@@ -1430,86 +1427,6 @@ function changeSiteShields(enabled, reportBreakage = false) {
   }));
 }
 
-function addPopupToggle(container, label, key, checked) {
-  const row = document.createElement('label');
-  row.className = 'shield-popup-toggle';
-  const text = document.createElement('span');
-  text.textContent = label;
-  const toggle = makeToggle(checked, label, (value) => {
-    run(window.browser.updateSettings({ [key]: value }).then(() => window.browser.reload()));
-  });
-  row.append(text, toggle);
-  container.append(row);
-}
-
-function renderShieldsPopup() {
-  const advancedWasOpen = Boolean(shieldsPopup.querySelector('.shield-advanced')?.open);
-  shieldsPopup.replaceChildren();
-  const site = getActiveSite();
-  if (!site) {
-    shieldsPopup.append(makePageHeading('Shields', 'Open a website to see page protection details.'));
-    return;
-  }
-  const tab = site.tab;
-  const siteEnabled = library.settings.shieldsEnabled && !siteHasShieldException(site.host);
-  const header = document.createElement('header');
-  header.className = 'shields-popup-heading';
-  const title = document.createElement('strong');
-  title.textContent = site.host;
-  const subtitle = document.createElement('span');
-  subtitle.textContent = siteEnabled ? 'Shields are on for this site' : 'Shields are off for this site';
-  header.append(title, subtitle);
-  const toggle = document.createElement('button');
-  toggle.className = `shield-primary-toggle${siteEnabled ? ' enabled' : ''}`;
-  toggle.type = 'button';
-  toggle.textContent = siteEnabled ? 'Shields on' : 'Shields off';
-  toggle.setAttribute('aria-pressed', String(siteEnabled));
-  toggle.disabled = !library.settings.shieldsEnabled;
-  toggle.addEventListener('click', () => changeSiteShields(!siteEnabled));
-  const blocked = document.createElement('div');
-  blocked.className = 'shield-total';
-  const count = document.createElement('strong');
-  count.textContent = String(tab.shieldsBlockedCount || 0);
-  const countLabel = document.createElement('span');
-  countLabel.textContent = 'requests blocked on this page';
-  blocked.append(count, countLabel);
-  const advanced = document.createElement('details');
-  advanced.className = 'shield-advanced';
-  const summary = document.createElement('summary');
-  summary.textContent = 'Advanced protections';
-  const options = document.createElement('div');
-  options.className = 'shield-advanced-options';
-  addPopupToggle(options, 'Ads', 'adsBlocking', library.settings.adsBlocking);
-  addPopupToggle(options, 'Trackers', 'trackersBlocking', library.settings.trackersBlocking);
-  addPopupToggle(options, 'HTTPS-first', 'httpsFirst', library.settings.httpsFirst);
-  addPopupToggle(options, 'URL cleaning', 'urlCleaning', library.settings.urlCleaning);
-  const categoryCounts = tab.shieldsBlockedByCategory || {};
-  const categoryLine = document.createElement('p');
-  categoryLine.className = 'shield-category-counts';
-  categoryLine.textContent = `Ads ${categoryCounts.ads || 0} · Trackers ${categoryCounts.trackers || 0} · Custom ${categoryCounts.custom || 0}`;
-  const domainList = document.createElement('ul');
-  domainList.className = 'shield-domain-list';
-  for (const domain of tab.shieldsBlockedDomains || []) {
-    const item = document.createElement('li');
-    item.textContent = domain;
-    domainList.append(item);
-  }
-  if (!domainList.childElementCount) {
-    const item = document.createElement('li');
-    item.textContent = 'No blocked requests recorded on this page.';
-    domainList.append(item);
-  }
-  const broken = document.createElement('button');
-  broken.className = 'secondary-button shield-report';
-  broken.type = 'button';
-  broken.textContent = 'Report a broken site · turn Shields off here';
-  broken.addEventListener('click', () => changeSiteShields(false, true));
-  options.append(categoryLine, domainList, broken);
-  advanced.append(summary, options);
-  advanced.open = advancedWasOpen;
-  shieldsPopup.append(header, toggle, blocked, advanced);
-}
-
 function renderShieldsButton() {
   const site = getActiveSite();
   const tab = site?.tab;
@@ -1520,7 +1437,6 @@ function renderShieldsButton() {
   shieldsButton.classList.toggle('shields-off', !enabled);
   shieldsButton.setAttribute('aria-label', `Shields${enabled ? ' on' : ' off'}${count ? `, ${count} blocked` : ''}`);
   shieldsButton.title = enabled ? `Shields · ${count} blocked` : 'Shields off for this site';
-  if (!shieldsPopup.hidden) renderShieldsPopup();
 }
 
 function renderHistoryPage(previousQuery = '', restoreSearchFocus = false) {
@@ -2531,40 +2447,6 @@ function showExtensionInstallDialog(extension) {
   dialog.showModal();
 }
 
-function renderExtensionsPopup() {
-  extensionsPopup.replaceChildren();
-  const heading = document.createElement('h2');
-  heading.textContent = 'Extensions';
-  extensionsPopup.append(heading);
-  const installed = (library.extensions || []).filter((extension) => extension.enabled);
-  if (!installed.length) {
-    const empty = document.createElement('p');
-    empty.className = 'extension-popup-empty';
-    empty.textContent = 'No enabled extensions.';
-    extensionsPopup.append(empty);
-  }
-  for (const extension of installed) {
-    const row = document.createElement('div');
-    row.className = 'extension-popup-row';
-    const name = document.createElement('span');
-    name.textContent = extension.name;
-    const state = document.createElement('small');
-    state.textContent = extension.status === 'active' ? 'Enabled' : 'Needs attention';
-    row.append(name, state);
-    extensionsPopup.append(row);
-  }
-  const manage = document.createElement('button');
-  manage.className = 'secondary-button';
-  manage.type = 'button';
-  manage.textContent = 'Manage extensions';
-  manage.addEventListener('click', () => {
-    extensionsPopup.hidden = true;
-    extensionsButton.setAttribute('aria-expanded', 'false');
-    run(window.browser.openInternal('extensions'));
-  });
-  extensionsPopup.append(manage);
-}
-
 function renderErrorPage(error) {
   const page = document.createElement('section');
   page.className = 'error-page';
@@ -2846,7 +2728,6 @@ function setLibrary(data) {
   }
   const homeEngine = document.querySelector('.home-search-engine');
   if (homeEngine) homeEngine.value = library.settings.searchEngine;
-  if (!extensionsPopup.hidden) renderExtensionsPopup();
 }
 
 function syncSettingsControls() {
@@ -2980,16 +2861,6 @@ document.addEventListener('keydown', (event) => {
       first?.focus();
     }
     return;
-  }
-  if (event.key === 'Escape' && !shieldsPopup.hidden) {
-    shieldsPopup.hidden = true;
-    shieldsButton.setAttribute('aria-expanded', 'false');
-    shieldsButton.focus();
-  }
-  if (event.key === 'Escape' && !extensionsPopup.hidden) {
-    extensionsPopup.hidden = true;
-    extensionsButton.setAttribute('aria-expanded', 'false');
-    extensionsButton.focus();
   }
 });
 backButton.addEventListener('click', () => run(window.browser.back()));
