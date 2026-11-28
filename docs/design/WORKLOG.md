@@ -125,3 +125,10 @@
 - **Known limits:** Runtime checks for toolbar menu opening/closing, focus, and the toast above web content still need the installed app or a working dev runtime. Retried `npm start -- --enable-logging --v=1` with Electron 45.5.0 installed; it exits with code 1 and no diagnostic, so no rendered verification was possible.
 - **Next:** Continue Phase 5 with runtime and cross-surface QA where the environment permits; preserve unverified states as gaps.
 
+## 2026-11-28 — Phase 5, batch 2: make manual QA actionable
+
+- **Checklist:** Added concrete Windows verification steps for native menu layering/closing, toast visibility over pages, settings navigation/search, history/bookmark refresh behavior, empty states, and destructive-dialog focus/cancel/confirm feedback. Corrected the viewport target to the BrowserWindow's actual 720-pixel minimum.
+- **Runtime update:** Retried with `--user-data-dir` pointing to a fresh temporary profile and verbose Electron logging; it also exits with code 1 and no diagnostic. The installed 1.0.3 app's earlier menu capture remains baseline evidence and does not verify the current source changes.
+- **Verification:** Documentation diff checked; code-level tests from Phase 5 batch 1 remain green. This checklist update does not substitute for interactive review.
+- **Next:** Continue code-level cross-surface review and resolve the toast visibility path without weakening the page-view isolation model.
+

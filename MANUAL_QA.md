@@ -4,14 +4,16 @@
 
 - [x] In the installed 1.0.3 app, open example.com and verify the Shields,
   Extensions, and three-dot menus appear above the active web page.
-- [ ] Complete interactive QA on Windows after npm start launches successfully.
+- [ ] Complete interactive QA on Windows after npm start launches successfully;
+  the base-profile and fresh temporary-profile launches currently exit with code 1.
 - [ ] Capture light, dark, high-contrast, compact, and 200% scale screenshots.
 - [ ] Run a screen-reader pass and automated accessibility scan.
 - [ ] Record startup, new-tab, tab-switch, and Shields before/after measurements.
 
-The development checkout's npm start was previously reported to exit with code
-1 and no diagnostic text; that launcher issue remains unverified. The
-installed-app check above passed, but full interactive QA is still in progress.
+The development checkout's npm start exits with code 1 and no diagnostic text,
+including with a fresh `--user-data-dir` and verbose Electron logging. Electron
+45.5.0 is installed. The installed-app menu check above is baseline evidence;
+full interactive QA for the current source remains in progress.
 ## Windows keyboard
 
 - [ ] Ctrl+T, Ctrl+W, Ctrl+Shift+T create, close, and restore tabs.
@@ -53,10 +55,21 @@ installed-app check above passed, but full interactive QA is still in progress.
   and logical across toolbar, bookmarks, dialogs, and page content.
 - [ ] High Contrast and Reduce Motion settings persist and apply immediately.
 - [ ] Test system/light/dark/high-contrast themes at 100%, 125%, 150%, and 200%.
-- [ ] Check dialogs, popups, settings search highlights, errors, and focus rings
-  for clipping and contrast.
+- [ ] Check native Shields, Extensions, and browser menus open above a live
+  `WebContentsView`, and close cleanly by Escape, outside click, and selection.
+- [ ] Verify toast messages are visible while a web page is active; the current
+  toast is in the base renderer and may be covered by the page view.
+- [ ] Check settings search highlights and no-result state; test active-section
+  fallback after filtering, Arrow Up/Down/Home/End navigation, and section links.
+- [ ] Check history day grouping, history/bookmark search, empty-state layout,
+  and query/focus retention after local data refresh.
+- [ ] For each destructive confirmation, test Cancel, Escape, initial focus,
+  confirm, focus return, progress state, and completion/error feedback.
+- [ ] Check dialogs, internal pages, errors, and focus rings for clipping and
+  contrast, including after the popup layering cleanup.
 - [ ] Run an axe-equivalent scan and manual NVDA/Windows Narrator review.
-- [ ] Check RTL layouts, zoom to 200%, and a 360-pixel-wide responsive viewport.
+- [ ] Check RTL layouts, zoom to 200%, and the narrowest supported 720-pixel
+  window width; current BrowserWindow minimum width is 720 pixels.
 
 ## Persistence, privacy, and errors
 
