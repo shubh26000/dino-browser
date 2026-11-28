@@ -448,14 +448,14 @@ body.high-contrast {
 }
 
 .tab-close:hover,
-.icon-button:hover,
+.icon-button:hover:not(:disabled),
 .new-tab:hover,
 .window-control:hover {
   background: var(--hover-overlay);
 }
 
 .tab-close:active,
-.icon-button:active,
+.icon-button:active:not(:disabled),
 .new-tab:active,
 .window-control:active {
   background: var(--pressed-overlay);
@@ -547,6 +547,19 @@ body.high-contrast {
   transition: color var(--motion-fast) ease, background-color var(--motion-fast) ease, transform var(--motion-fast) ease;
 }
 
+.icon-button:hover:not(:disabled) {
+  transform: translateY(-1px);
+}
+
+.icon-button:active:not(:disabled) {
+  transform: scale(.94);
+}
+
+.icon-button[aria-expanded="true"] {
+  background: var(--accent-soft);
+  color: var(--accent);
+}
+
 .icon-button:disabled {
   color: var(--text-disabled);
   cursor: default;
@@ -584,6 +597,18 @@ body.high-contrast {
   height: 16px;
 }
 
+.secure-mark[data-security="secure"] {
+  color: var(--success);
+}
+
+.secure-mark[data-security="insecure"] {
+  color: var(--warning);
+}
+
+.secure-mark[data-security="internal"] {
+  color: var(--text-secondary);
+}
+
 #address {
   width: 100%;
   min-width: 0;
@@ -601,6 +626,10 @@ body.high-contrast {
 
 .bookmark-button {
   color: var(--accent);
+}
+
+.bookmark-button[aria-pressed="true"] {
+  background: var(--accent-soft);
 }
 
 .shields-button {
@@ -621,7 +650,7 @@ body.high-contrast {
   border: 1px solid var(--chrome);
   border-radius: var(--radius-pill);
   background: var(--accent);
-  color: #fff;
+  color: var(--text-on-accent);
   font-size: 11px;
   font-variant-numeric: tabular-nums;
   line-height: 16px;

@@ -1,5 +1,6 @@
 const tabsElement = document.querySelector('#tabs');
 const addressInput = document.querySelector('#address');
+const secureMark = document.querySelector('.secure-mark');
 const backButton = document.querySelector('#back');
 const forwardButton = document.querySelector('#forward');
 const bookmarkButton = document.querySelector('#bookmark');
@@ -26,6 +27,9 @@ const ICONS = {
   restore: '<path d="M8 8V5h11v11h-3M5 8h11v11H5z"/>',
   reload: '<path d="M20 7v5h-5M19 12a7 7 0 1 1-2-4.9L20 12"/>',
   stop: '<path d="M7 7h10v10H7z"/>',
+  lock: '<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/>',
+  globe: '<circle cx="12" cy="12" r="9"/><path d="M3.5 9h17M3.5 15h17M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
+  warning: '<path d="m12 3 9 17H3L12 3Z"/><path d="M12 9v4m0 3h.01"/>',
 };
 
 function makeIcon(name) {
@@ -48,6 +52,7 @@ newTabButton.className = 'new-tab chrome-button';
 newTabButton.type = 'button';
 newTabButton.append(makeIcon('add'));
 newTabButton.setAttribute('aria-label', 'New tab');
+newTabButton.setAttribute('aria-keyshortcuts', 'Control+T');
 newTabButton.title = 'New tab';
 newTabButton.addEventListener('click', () => run(window.browser.newTab()));
 
@@ -1591,7 +1596,7 @@ function renderSettingsPage() {
   addSetting('Corner roundness', 'Adjust the shape of controls and cards.', roundness);
   toggleSetting('showBookmarksBar', 'Bookmarks bar', library.settings.showBookmarksBar, 'Show or hide the bookmarks bar below the toolbar.');
   buttonSetting('Start page', 'Choose wallpaper, shortcuts, and local widgets.', 'Open start page', () => run(window.browser.openInternal('home')));
-  addUnavailableSetting('Tab strip and toolbar buttons', 'Vertical tabs, button visibility, and hover cards are not implemented yet.');
+  addUnavailableSetting('Tab strip and toolbar buttons', 'Vertical tabs and button visibility are not implemented yet.');
 
   section('privacy', 'Privacy and security', 'Control local data and Shields.');
   buttonSetting('Shields', 'Manage request blocking, exceptions, and local counters.', 'Open Shields settings', () => run(window.browser.openInternal('shields')));
@@ -2099,15 +2104,38 @@ function renderState(state) {
   }
   backButton.disabled = !state.canGoBack;
   forwardButton.disabled = !state.canGoForward;
+  backButton.title = 'Back · Alt+Left';
+  backButton.setAttribute('aria-label', 'Go back');
+  backButton.setAttribute('aria-keyshortcuts', 'Alt+ArrowLeft');
+  forwardButton.title = 'Forward · Alt+Right';
+  forwardButton.setAttribute('aria-label', 'Go forward');
+  forwardButton.setAttribute('aria-keyshortcuts', 'Alt+ArrowRight');
   const reloadButton = document.querySelector('#reload');
   const canStop = Boolean(activeTab?.isLoading && !activeTab.internalPage);
   setIcon(reloadButton, canStop ? 'stop' : 'reload');
-  reloadButton.title = canStop ? 'Stop loading' : 'Reload page';
-  reloadButton.setAttribute('aria-label', reloadButton.title);
+  reloadButton.title = canStop ? 'Stop loading · Esc' : 'Reload page · F5 or Ctrl+R';
+  reloadButton.setAttribute('aria-label', canStop ? 'Stop loading' : 'Reload page');
+  reloadButton.setAttribute('aria-keyshortcuts', canStop ? 'Escape' : 'F5 Control+R');
   bookmarkButton.disabled = !activeTab || Boolean(activeTab.internalPage || activeTab.error);
   setIcon(bookmarkButton, activeTab?.isBookmarked ? 'starFilled' : 'star');
-  bookmarkButton.title = activeTab?.isBookmarked ? 'Remove bookmark' : 'Bookmark this page';
-  bookmarkButton.setAttribute('aria-label', bookmarkButton.title);
+  bookmarkButton.title = activeTab?.isBookmarked ? 'Remove bookmark · Ctrl+D' : 'Bookmark this page · Ctrl+D';
+  bookmarkButton.setAttribute('aria-label', activeTab?.isBookmarked ? 'Remove bookmark' : 'Bookmark this page');
+  bookmarkButton.setAttribute('aria-pressed', String(Boolean(activeTab?.isBookmarked)));
+  bookmarkButton.setAttribute('aria-keyshortcuts', 'Control+D');
+  const pageProtocol = (() => {
+    try { return new URL(activeTab?.url || '').protocol; } catch { return ''; }
+  })();
+  const security = pageProtocol === 'https:'
+    ? { state: 'secure', icon: 'lock', label: 'Secure connection (HTTPS)' }
+    : pageProtocol === 'http:'
+      ? { state: 'insecure', icon: 'warning', label: 'Not secure (HTTP)' }
+      : { state: 'internal', icon: 'globe', label: 'Browser or local page' };
+  secureMark.dataset.security = security.state;
+  secureMark.title = security.label;
+  secureMark.setAttribute('role', 'img');
+  secureMark.setAttribute('aria-label', security.label);
+  secureMark.removeAttribute('aria-hidden');
+  secureMark.replaceChildren(makeIcon(security.icon));
   internalPage.hidden = !state.internalPage;
   const tabSearchChanged = state.internalPage === 'tab-search'
     && getTabSearchSignature() !== tabSearchSignature;

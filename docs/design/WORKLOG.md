@@ -30,3 +30,13 @@
 - **Known limits:** Electron runtime QA is still unavailable in this checkout (the source launch exits with code 1 and no diagnostic, as recorded in Phase 1). The rendered tab card, keyboard flow, and interactions therefore need manual verification when the dev app can be launched. Legacy CSS values remain outside this batch's token migration.
 - **Next:** Continue Phase 2 with the remaining toolbar and navigation states, then Phase 3 start page. Keep the known runtime and stylesheet migration gaps visible.
 
+## 2026-11-28 — Phase 2, batch 2: toolbar and navigation states
+
+- **Navigation controls:** Back, Forward, Reload/Stop, Bookmark, and New Tab now expose their implemented keyboard shortcuts in tooltips and `aria-keyshortcuts`. Bookmark state is conveyed with `aria-pressed`; a loading tab changes Reload to Stop and advertises Escape.
+- **Connection indicator:** The address-bar marker now shows a lock for HTTPS, a warning for HTTP, and a neutral globe for browser/local pages, with a matching accessible label. This reflects the displayed URL scheme; it is not a certificate-validation indicator.
+- **Toolbar feedback:** Enabled icon buttons receive brief hover/press motion; disabled controls no longer pick up hover backgrounds. Expanded popup buttons and saved bookmarks get an accent state. Shields count labels use the palette's foreground token.
+- **Settings copy:** Removed the stale claim that tab hover cards are unavailable; vertical tabs and button visibility remain unavailable.
+- **Verification:** `npm test` **33 passed, 0 failed**; `npm run check:theme-contrast` **54 checks, 0 failures**; `node --check renderer.js` and `git diff --check` passed.
+- **Known limits:** Source Electron runtime QA remains unavailable, and full rendered contrast testing is pending. No navigation or privacy behavior was changed.
+- **Next:** Verify this batch, then begin Phase 3 start-page polish under Dino Night.
+
