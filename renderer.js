@@ -439,7 +439,7 @@ function renderHomePage() {
 
 function startPageValues() {
   return library.startPage || {
-    wallpaper: 'aurora', wallpaperUrl: null, layout: 'clean', greetingName: '',
+    wallpaper: 'aurora', wallpaperUrl: null, wallpaperDim: 18, wallpaperBlur: 0, cardOpacity: 13, layout: 'clean', greetingName: '',
     showGreeting: true, showClock: true, use24Hour: false, showPrivacyStats: true,
     showShortcuts: true, widgets: [], shortcuts: [], todoItems: [], notes: '',
   };
@@ -804,12 +804,15 @@ function renderStartPageContent(focusSearch = false) {
   const previousSearchValue = previousSearch?.value || '';
   const shouldRefocusSearch = document.activeElement === previousSearch;
   const focusedShortcutId = document.activeElement?.closest('.start-shortcut')?.dataset.shortcutId;
-  const playEntrance = !root.dataset.entrancePlayed && !document.body.classList.contains('reduce-motion');
+  const playEntrance = !root.dataset.entrancePlayed
+    && !document.body.classList.contains('reduce-motion')
+    && !document.body.classList.contains('reduce-effects');
   root.dataset.entrancePlayed = 'true';
   bindStartPageParallax(root);
   const settings = startPageValues();
   root.dataset.wallpaper = settings.wallpaper;
   root.dataset.layout = settings.layout;
+  applyStartPageVisualSettings(settings);
   let contentHost = root.querySelector('#start-content-layer');
   if (!contentHost) {
     contentHost = document.createElement('div');
@@ -952,7 +955,7 @@ function bindStartPageParallax(root) {
   if (root.dataset.parallaxBound) return;
   root.dataset.parallaxBound = 'true';
   root.addEventListener('pointermove', (event) => {
-    if (document.body.classList.contains('reduce-motion')) return;
+    if (document.body.classList.contains('reduce-motion') || document.body.classList.contains('reduce-effects')) return;
     const bounds = root.getBoundingClientRect();
     const x = ((event.clientX - bounds.left) / Math.max(1, bounds.width) - 0.5) * -16;
     const y = ((event.clientY - bounds.top) / Math.max(1, bounds.height) - 0.5) * -16;
@@ -963,6 +966,15 @@ function bindStartPageParallax(root) {
     root.style.setProperty('--parallax-x', '0px');
     root.style.setProperty('--parallax-y', '0px');
   });
+}
+
+function applyStartPageVisualSettings(settings) {
+  const root = document.querySelector('#start-page');
+  if (!root) return;
+  root.style.setProperty('--wallpaper-dim', String(settings.wallpaperDim / 100));
+  root.style.setProperty('--wallpaper-blur', `${settings.wallpaperBlur}px`);
+  root.style.setProperty('--start-card-opacity', `${settings.cardOpacity}%`);
+  root.style.setProperty('--start-card-opacity-hover', `${settings.cardOpacity + 5}%`);
 }
 
 function renderCustomizeDrawer() {
@@ -1010,6 +1022,13 @@ function renderCustomizeDrawer() {
     button.addEventListener('click', () => run(window.browser.updateStartPage({ wallpaper: id, wallpaperPath: null })));
     backgrounds.append(button);
   }
+  const dim = makeStartRange('wallpaperDim', 'Background dim', 0, 65, '%', 'Darken the wallpaper to keep text readable.');
+  addDrawerSetting(drawer, 'Background dim', 'Darken the wallpaper to keep text readable.', dim);
+  const blur = makeStartRange('wallpaperBlur', 'Wallpaper blur', 0, 8, 'px', 'Blur stays off when Reduce effects is enabled.');
+  blur.querySelector('input').disabled = Boolean(library.settings.reduceEffects);
+  addDrawerSetting(drawer, 'Wallpaper blur', 'Soften the wallpaper behind the page content.', blur);
+  const cardOpacity = makeStartRange('cardOpacity', 'Card opacity', 8, 45, '%', 'Adjust privacy and widget card surfaces.');
+  addDrawerSetting(drawer, 'Card opacity', 'Adjust privacy and widget card surfaces.', cardOpacity);
   const customWallpaper = document.createElement('button');
   customWallpaper.className = 'secondary-button';
   customWallpaper.type = 'button';
@@ -1072,6 +1091,7 @@ function renderCustomizeDrawer() {
     if (!window.confirm('Reset the start page and remove its custom shortcuts, tasks, and notes?')) return;
     run(window.browser.updateStartPage({
       wallpaper: 'aurora', wallpaperPath: null, layout: 'clean', greetingName: '',
+      wallpaperDim: 18, wallpaperBlur: 0, cardOpacity: 13,
       showGreeting: true, showClock: true, use24Hour: false, showPrivacyStats: true,
       showShortcuts: true, widgets: [], shortcuts: [], todoItems: [], notes: '',
     }).then(() => showToast('Start page reset.')));
@@ -1107,6 +1127,12 @@ function syncStartPageControls() {
     const value = settings[control.dataset.startKey];
     if (control.type === 'checkbox') control.checked = Boolean(value);
     else control.value = value;
+    if (control.dataset.startKey === 'wallpaperBlur') control.disabled = Boolean(library.settings.reduceEffects);
+  });
+  drawer.querySelectorAll('[data-start-range-output]').forEach((output) => {
+    const value = settings[output.dataset.startRangeOutput];
+    output.value = `${value}${output.dataset.suffix || ''}`;
+    output.textContent = output.value;
   });
   drawer.querySelectorAll('[data-widget-id]').forEach((control) => {
     control.checked = settings.widgets.includes(control.dataset.widgetId);
@@ -1114,6 +1140,34 @@ function syncStartPageControls() {
   drawer.querySelectorAll('[data-start-wallpaper]').forEach((control) => {
     control.setAttribute('aria-pressed', String(settings.wallpaper === control.dataset.startWallpaper));
   });
+}
+
+function makeStartRange(key, label, min, max, suffix, description) {
+  const wrapper = document.createElement('div');
+  wrapper.className = 'start-range-control';
+  const input = document.createElement('input');
+  input.type = 'range';
+  input.min = String(min);
+  input.max = String(max);
+  input.step = '1';
+  input.value = String(startPageValues()[key]);
+  input.dataset.startKey = key;
+  input.setAttribute('aria-label', `${label}. ${description}`);
+  const output = document.createElement('output');
+  output.dataset.startRangeOutput = key;
+  output.dataset.suffix = suffix;
+  output.value = `${input.value}${suffix}`;
+  output.textContent = output.value;
+  input.addEventListener('input', () => {
+    output.value = `${input.value}${suffix}`;
+    output.textContent = output.value;
+    applyStartPageVisualSettings({ ...startPageValues(), [key]: Number(input.value) });
+  });
+  input.addEventListener('change', () => {
+    run(window.browser.updateStartPage({ [key]: Number(input.value) }));
+  });
+  wrapper.append(input, output);
+  return wrapper;
 }
 
 function openCustomizeDrawer() {
@@ -2467,7 +2521,10 @@ function setLibrary(data) {
   if (browserState.internalPage === 'home' && changedStartPageDisplay) {
     renderStartPageContent(!previousLibrary.startPage);
   }
-  if (browserState.internalPage === 'home') syncStartPageControls();
+  if (browserState.internalPage === 'home') {
+    applyStartPageVisualSettings(library.startPage);
+    syncStartPageControls();
+  }
   const homeEngine = document.querySelector('.home-search-engine');
   if (homeEngine) homeEngine.value = library.settings.searchEngine;
   if (!extensionsPopup.hidden) renderExtensionsPopup();

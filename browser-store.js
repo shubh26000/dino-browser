@@ -44,6 +44,9 @@ function defaultState() {
     startPage: {
       wallpaper: 'aurora',
       wallpaperPath: null,
+      wallpaperDim: 18,
+      wallpaperBlur: 0,
+      cardOpacity: 13,
       layout: 'clean',
       greetingName: '',
       showGreeting: true,
@@ -126,6 +129,9 @@ function parseStartPage(value) {
     !START_PAGE_WALLPAPERS.has(startPage.wallpaper)
     || (startPage.wallpaperPath !== null && (typeof startPage.wallpaperPath !== 'string' || startPage.wallpaperPath.length > 4096))
     || (startPage.wallpaper === 'custom' && !startPage.wallpaperPath)
+    || !Number.isInteger(startPage.wallpaperDim) || startPage.wallpaperDim < 0 || startPage.wallpaperDim > 65
+    || !Number.isInteger(startPage.wallpaperBlur) || startPage.wallpaperBlur < 0 || startPage.wallpaperBlur > 8
+    || !Number.isInteger(startPage.cardOpacity) || startPage.cardOpacity < 8 || startPage.cardOpacity > 45
     || !['clean', 'cards'].includes(startPage.layout)
     || typeof startPage.greetingName !== 'string'
     || startPage.greetingName.length > 40
@@ -167,6 +173,9 @@ function parseStartPage(value) {
   return {
     wallpaper: startPage.wallpaper,
     wallpaperPath: startPage.wallpaperPath,
+    wallpaperDim: startPage.wallpaperDim,
+    wallpaperBlur: startPage.wallpaperBlur,
+    cardOpacity: startPage.cardOpacity,
     layout: startPage.layout,
     greetingName: startPage.greetingName,
     showGreeting: startPage.showGreeting,

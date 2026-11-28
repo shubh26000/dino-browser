@@ -57,3 +57,11 @@
 - **Known limits:** No new dependency or remote content. Browser runtime still exits without a diagnostic; visual widget/dialog verification and after screenshots are pending.
 - **Next:** Continue Phase 3 with customization-drawer states and widget layout polish, then revisit the runtime capture gap.
 
+## 2026-11-28 — Phase 3, batch 3: live start-page customization
+
+- **Controls:** Added live sliders for background dim, wallpaper blur, and privacy/widget card opacity. Values preview while dragging, then persist through the existing start-page IPC and encrypted store.
+- **Compatibility and validation:** Older profiles receive defaults (dim 18%, blur 0px, card opacity 13%). The store validates ranges (0–65%, 0–8px, 8–45%) and rejects malformed values. Reset restores those defaults. Wallpaper blur is disabled when Reduce effects is enabled; parallax, wallpaper filtering, glass blur, and drawer motion are also suppressed by that setting while the drawer backdrop remains available to close the panel.
+- **Verification:** `npm test` **33 passed, 0 failed** (including persistence, defaults and range validation); `npm run check:theme-contrast` **54 checks, 0 failures**; `node --check renderer.js`, `node --check browser-store.js`, and `git diff --check` passed.
+- **Visual evidence:** `03-start-page.jpg` remains the baseline. The app still exits on `npm start` with code 1 and no diagnostic, so the after screenshot cannot be responsibly captured from the actual renderer yet. Performance measurements remain uncollected.
+- **Next:** Continue Phase 3 with the remaining drawer and widget details; return to Phase 4 after the start page is covered. Revisit visual capture as soon as the development runtime is available.
+

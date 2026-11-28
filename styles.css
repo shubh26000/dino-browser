@@ -1438,13 +1438,36 @@ body.high-contrast {
   box-shadow: none;
 }
 
-.reduce-effects .browser-chrome::before,
-.reduce-effects .customize-backdrop {
+.reduce-effects .browser-chrome::before {
   display: none;
 }
 
 .reduce-effects .customize-drawer {
   backdrop-filter: none;
+  animation: none;
+}
+
+.reduce-effects .customize-backdrop {
+  backdrop-filter: none;
+}
+
+.reduce-effects .start-page::before,
+.reduce-effects .start-wallpaper {
+  filter: none !important;
+  transform: none !important;
+  transition: none !important;
+}
+
+.reduce-effects .start-widget,
+.reduce-effects .start-page .privacy-stat,
+.reduce-effects .start-customize-button {
+  backdrop-filter: none;
+  box-shadow: none;
+}
+
+.reduce-effects .start-widget,
+.reduce-effects .start-shortcut {
+  transition: none;
 }
 
 .theme-transition,
@@ -1577,7 +1600,12 @@ body.high-contrast {
   position: absolute;
   z-index: 1;
   inset: 0;
-  background: linear-gradient(180deg, rgb(8 11 22 / 30%), rgb(8 11 22 / 12%) 55%, rgb(8 11 22 / 38%));
+  background: linear-gradient(
+    180deg,
+    rgb(8 11 22 / calc(var(--wallpaper-dim, .18) + .12)),
+    rgb(8 11 22 / calc(var(--wallpaper-dim, .18) * .65)) 55%,
+    rgb(8 11 22 / calc(var(--wallpaper-dim, .18) + .2))
+  );
   content: "";
   pointer-events: none;
 }
@@ -1585,25 +1613,27 @@ body.high-contrast {
 .start-page::before {
   position: absolute;
   z-index: 0;
-  inset: -8px;
+  inset: -14px;
   background: inherit;
   content: "";
   pointer-events: none;
   transform: translate3d(var(--parallax-x, 0px), var(--parallax-y, 0px), 0) scale(1.02);
   transition: transform var(--dur-slow) var(--ease-out);
+  filter: blur(var(--wallpaper-blur, 0px));
 }
 
 .start-wallpaper {
   position: absolute;
   z-index: 0;
-  inset: 0;
-  width: 100%;
-  height: 100%;
+  inset: -14px;
+  width: calc(100% + 28px);
+  height: calc(100% + 28px);
   object-fit: cover;
   opacity: 0;
   transform: translate3d(var(--parallax-x, 0px), var(--parallax-y, 0px), 0) scale(1.02);
   transition: opacity var(--dur-slow) var(--ease-out);
   transition-property: opacity, transform;
+  filter: blur(var(--wallpaper-blur, 0px));
 }
 
 .start-wallpaper.is-loaded {
@@ -1724,8 +1754,8 @@ body.high-contrast {
 .start-page .privacy-stat {
   min-width: 112px;
   padding: 8px 12px;
-  border-color: rgb(255 255 255 / 18%);
-  background: rgb(255 255 255 / 12%);
+  border-color: rgb(255 255 255 / calc(var(--start-card-opacity, 13%) + 8%));
+  background: rgb(255 255 255 / var(--start-card-opacity, 13%));
   box-shadow: 0 6px 18px rgb(0 0 0 / 10%);
   color: white;
   backdrop-filter: blur(var(--blur-glass));
@@ -1908,9 +1938,9 @@ body.high-contrast {
 .start-widget {
   min-height: 142px;
   padding: 16px;
-  border: 1px solid rgb(255 255 255 / 22%);
+  border: 1px solid rgb(255 255 255 / calc(var(--start-card-opacity, 13%) + 9%));
   border-radius: var(--radius-xl);
-  background: rgb(255 255 255 / 13%);
+  background: rgb(255 255 255 / var(--start-card-opacity, 13%));
   box-shadow: 0 12px 28px rgb(0 0 0 / 12%);
   color: white;
   backdrop-filter: blur(var(--blur-glass));
@@ -1920,8 +1950,8 @@ body.high-contrast {
 .start-widget:hover,
 .start-widget:focus-within {
   transform: translateY(-2px);
-  border-color: rgb(255 255 255 / 36%);
-  background: rgb(255 255 255 / 16%);
+  border-color: rgb(255 255 255 / calc(var(--start-card-opacity, 13%) + 20%));
+  background: rgb(255 255 255 / var(--start-card-opacity-hover, 18%));
 }
 
 .start-widget h2 {
@@ -2089,6 +2119,7 @@ body.high-contrast {
   height: 100%;
   border: 0;
   background: rgb(6 9 15 / 36%);
+  backdrop-filter: blur(var(--blur-subtle));
 }
 
 .customize-backdrop[hidden],
@@ -2184,6 +2215,32 @@ body.high-contrast {
   color: var(--text-secondary);
   font-size: 11px;
   line-height: 1.4;
+}
+
+.start-range-control {
+  display: flex;
+  width: min(180px, 48%);
+  align-items: center;
+  gap: 8px;
+}
+
+.start-range-control input[type="range"] {
+  width: 100%;
+  min-width: 72px;
+  accent-color: var(--accent);
+}
+
+.start-range-control output {
+  min-width: 34px;
+  color: var(--text-secondary);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.start-range-control input:disabled {
+  opacity: .5;
+  cursor: not-allowed;
 }
 
 .greeting-name {
