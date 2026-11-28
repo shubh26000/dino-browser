@@ -111,3 +111,10 @@
 - **Known limits:** The Downloads page remains an explicitly labeled placeholder because this build has no download manager. Full visual review still requires the Electron runtime to launch.
 - **Next:** Continue Phase 4 with confirmation flows and internal-page detail states.
 
+## 2026-11-28 — Phase 4, batch 4: destructive-action confirmations
+
+- **Confirmations:** Replaced native browser `confirm()` popups for start-page reset, settings reset, Shields reset, extension removal, and disabling extension support with the browser's in-app modal dialog. Dialog copy names what changes, Cancel receives initial focus, Escape remains a native dialog cancel, and each destructive action retains its existing IPC operation and completion feedback.
+- **Verification:** `npm test` **33 passed, 0 failed**; `npm run check:theme-contrast` **54 checks, 0 failures**; `node --check renderer.js` and `git diff --check` passed. A source search confirms no `window.confirm()` calls remain.
+- **Known limits:** Confirmation flows still need keyboard and focus-return verification in the actual Electron runtime.
+- **Next:** Review the remaining internal-page details and move into cross-surface QA.
+

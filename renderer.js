@@ -1261,13 +1261,17 @@ function renderCustomizeDrawer() {
   reset.type = 'button';
   reset.textContent = 'Reset start page';
   reset.addEventListener('click', () => {
-    if (!window.confirm('Reset the start page and remove its custom shortcuts, tasks, and notes?')) return;
-    run(window.browser.updateStartPage({
-      wallpaper: 'aurora', wallpaperPath: null, layout: 'clean', greetingName: '',
-      wallpaperDim: 18, wallpaperBlur: 0, cardOpacity: 13,
-      showGreeting: true, showClock: true, use24Hour: false, showPrivacyStats: true,
-      showShortcuts: true, widgets: [], widgetSizes: {}, shortcuts: [], todoItems: [], notes: '',
-    }).then(() => showToast('Start page reset.')));
+    showConfirmDialog({
+      title: 'Reset start page?',
+      message: 'This restores the wallpaper and layout, and removes custom shortcuts, tasks, and notes.',
+      confirmLabel: 'Reset start page',
+      onConfirm: () => run(window.browser.updateStartPage({
+        wallpaper: 'aurora', wallpaperPath: null, layout: 'clean', greetingName: '',
+        wallpaperDim: 18, wallpaperBlur: 0, cardOpacity: 13,
+        showGreeting: true, showClock: true, use24Hour: false, showPrivacyStats: true,
+        showShortcuts: true, widgets: [], widgetSizes: {}, shortcuts: [], todoItems: [], notes: '',
+      }).then(() => showToast('Start page reset.'))),
+    });
   });
   drawer.append(reset);
   customize.addEventListener('click', () => openCustomizeDrawer());
@@ -1755,6 +1759,40 @@ function confirmClearData() {
   dialog.showModal();
 }
 
+function showConfirmDialog({ title, message, confirmLabel, onConfirm }) {
+  const dialog = document.createElement('dialog');
+  dialog.className = 'shortcut-dialog confirm-action-dialog';
+  const form = document.createElement('form');
+  form.method = 'dialog';
+  const heading = document.createElement('h2');
+  heading.textContent = title;
+  const detail = document.createElement('p');
+  detail.textContent = message;
+  const actions = document.createElement('div');
+  actions.className = 'shortcut-dialog-actions';
+  const cancel = document.createElement('button');
+  cancel.className = 'secondary-button';
+  cancel.type = 'button';
+  cancel.textContent = 'Cancel';
+  cancel.autofocus = true;
+  cancel.addEventListener('click', () => dialog.close());
+  const confirm = document.createElement('button');
+  confirm.className = 'primary-button danger-button';
+  confirm.type = 'submit';
+  confirm.textContent = confirmLabel;
+  actions.append(cancel, confirm);
+  form.append(heading, detail, actions);
+  dialog.append(form);
+  document.body.append(dialog);
+  dialog.addEventListener('close', () => dialog.remove(), { once: true });
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    dialog.close();
+    onConfirm();
+  });
+  dialog.showModal();
+}
+
 function saveSetting(patch) {
   return window.browser.updateSettings(patch).then((settings) => {
     showToast('Saved');
@@ -2104,8 +2142,12 @@ function renderSettingsPage() {
 
   section('reset', 'Reset settings', 'Restore browser preferences or clear local browsing data.');
   buttonSetting('Restore default settings', 'Reset appearance, search, profile label, and Shields preferences. Bookmarks and start-page data stay.', 'Reset settings', () => {
-    if (!window.confirm('Restore the browser settings to their defaults? Bookmarks and start-page data will stay.')) return;
-    run(window.browser.resetSettings().then(() => showToast('Settings reset.')));
+    showConfirmDialog({
+      title: 'Restore default settings?',
+      message: 'Appearance, search, profile label, and Shields preferences will reset. Your bookmarks and start-page data will stay.',
+      confirmLabel: 'Restore defaults',
+      onConfirm: () => run(window.browser.resetSettings().then(() => showToast('Settings reset.'))),
+    });
   }, 'danger-button');
   buttonSetting('Clear browsing data', 'Clear saved history and the temporary website session.', 'Clear browsing data…', () => confirmClearData(), 'danger-button');
 
@@ -2214,16 +2256,20 @@ function renderShieldsSettingsPage() {
   reset.type = 'button';
   reset.textContent = 'Reset Shields settings';
   reset.addEventListener('click', () => {
-    if (!window.confirm('Reset Shields settings and remove custom rules and site exceptions?')) return;
-    run(window.browser.updateSettings({
-      shieldsEnabled: true,
-      adsBlocking: true,
-      trackersBlocking: true,
-      httpsFirst: true,
-      urlCleaning: true,
-      shieldExceptions: [],
-      customBlockedHosts: [],
-    }).then(() => showToast('Shields settings reset.')));
+    showConfirmDialog({
+      title: 'Reset Shields settings?',
+      message: 'This restores the default blocking options and removes custom host rules and site exceptions.',
+      confirmLabel: 'Reset Shields',
+      onConfirm: () => run(window.browser.updateSettings({
+        shieldsEnabled: true,
+        adsBlocking: true,
+        trackersBlocking: true,
+        httpsFirst: true,
+        urlCleaning: true,
+        shieldExceptions: [],
+        customBlockedHosts: [],
+      }).then(() => showToast('Shields settings reset.'))),
+    });
   });
   internalPage.append(reset);
 }
@@ -2394,8 +2440,12 @@ function renderExtensionsPage() {
     remove.type = 'button';
     remove.textContent = 'Remove';
     remove.addEventListener('click', () => {
-      if (!window.confirm(`Remove ${extension.name} from this browser?`)) return;
-      run(window.browser.removeExtension(extension.key));
+      showConfirmDialog({
+        title: `Remove ${extension.name}?`,
+        message: 'This removes the unpacked extension and its local browser registration.',
+        confirmLabel: 'Remove extension',
+        onConfirm: () => run(window.browser.removeExtension(extension.key)),
+      });
     });
     remove.disabled = extension.status === 'restart-required';
     controls.append(enabled, remove);
@@ -2411,8 +2461,12 @@ function renderExtensionsPage() {
     disable.type = 'button';
     disable.textContent = 'Disable extension support';
     disable.addEventListener('click', () => {
-      if (!window.confirm('Disable extension support, remove installed extensions, and clear cookies, site data, extension data, and cache from the persistent extension profile? The browser will return to a temporary website session after restart.')) return;
-      run(window.browser.disableExtensionSupport().then(() => showToast('Extension support disabled. Restart the browser to finish.')));
+      showConfirmDialog({
+        title: 'Disable extension support?',
+        message: 'Installed extensions will be removed, and cookies, site data, extension data, and cache in the persistent extension profile will be cleared. The browser will use a temporary website session after restart.',
+        confirmLabel: 'Disable and clear data',
+        onConfirm: () => run(window.browser.disableExtensionSupport().then(() => showToast('Extension support disabled. Restart the browser to finish.'))),
+      });
     });
     internalPage.append(disable);
   }

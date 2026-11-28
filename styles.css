@@ -2492,6 +2492,12 @@ body.high-contrast {
   margin: 0 0 4px;
 }
 
+.confirm-action-dialog p {
+  margin: 0;
+  color: var(--text-secondary);
+  line-height: 1.55;
+}
+
 .shortcut-dialog input {
   height: 40px;
   padding: 0 12px;
