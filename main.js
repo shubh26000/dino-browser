@@ -27,6 +27,10 @@ const {
 
 const UI_URL = pathToFileURL(path.join(__dirname, 'index.html')).href;
 const THEME_GALLERY_URL = pathToFileURL(path.join(__dirname, 'docs', 'design', 'theme-gallery.html')).href;
+const TOAST_WINDOW_WIDTH = 440;
+const TOAST_WINDOW_HEIGHT = 132;
+const TOAST_WINDOW_MARGIN = 18;
+const TOAST_DURATION_MS = 4000;
 const SHOW_THEME_GALLERY = process.argv.includes('--theme-gallery') && !app.isPackaged;
 const BOOKMARK_IMPORT_MAX_BYTES = 10 * 1024 * 1024;
 const INTERNAL_PAGES = new Set(['home', 'history', 'bookmarks', 'settings', 'shields', 'extensions', 'tab-search', 'downloads']);
@@ -37,6 +41,15 @@ const tabsByWebContentsId = new Map();
 const shieldsUpdateTimers = new Map();
 let shieldsStatsSaveTimer;
 let browserWindow;
+let toastWindow;
+let toastTimer;
+let toastOverlayReady = false;
+let toastOverlaySentSequence = 0;
+let toastOverlaySentAppearance = '';
+let toastOverlayDisplayId = 0;
+let toastSequence = 0;
+let toastMessage;
+let toastExpiresAt = 0;
 let activeTabId;
 let nextTabId = 1;
 let store;
@@ -302,7 +315,150 @@ function sendState() {
     isMaximized: browserWindow.isMaximized(),
     isFullScreen: browserWindow.isFullScreen(),
   });
+  syncToastOverlay();
 }
+
+function toastAppearance() {
+  const settings = store?.state.settings || {};
+  const requestedTheme = settings.theme || 'night';
+  const resolvedTheme = requestedTheme === 'system'
+    ? (nativeTheme.shouldUseDarkColors ? 'night' : 'daylight')
+    : requestedTheme === 'dark' ? 'night'
+      : requestedTheme === 'light' ? 'daylight' : requestedTheme;
+  const useDark = ['night', 'aurora', 'ember', 'green'].includes(resolvedTheme)
+    || (resolvedTheme === 'high-contrast' && nativeTheme.shouldUseDarkColors);
+  const highContrast = Boolean(settings.highContrast) || resolvedTheme === 'high-contrast';
+  const themeClass = highContrast
+    ? (useDark ? 'palette-high-contrast-dark' : 'palette-high-contrast')
+    : `palette-${resolvedTheme}`;
+  return {
+    themeClass,
+    accent: highContrast || settings.accentMode === 'theme' ? null : settings.accent,
+    reduceMotion: Boolean(settings.reduceMotion),
+  };
+}
+
+function positionToastWindow() {
+  if (!browserWindow || browserWindow.isDestroyed() || !toastWindow || toastWindow.isDestroyed()) return;
+  const bounds = browserWindow.getBounds();
+  toastWindow.setBounds({
+    x: Math.round(bounds.x + bounds.width - TOAST_WINDOW_WIDTH - TOAST_WINDOW_MARGIN),
+    y: Math.round(bounds.y + bounds.height - TOAST_WINDOW_HEIGHT - TOAST_WINDOW_MARGIN),
+    width: TOAST_WINDOW_WIDTH,
+    height: TOAST_WINDOW_HEIGHT,
+  });
+}
+
+function createToastWindow() {
+  if (!browserWindow || browserWindow.isDestroyed() || toastWindow) return;
+  toastOverlayReady = false;
+  toastOverlaySentSequence = 0;
+  toastOverlaySentAppearance = '';
+  toastWindow = new BrowserWindow({
+    parent: browserWindow,
+    width: TOAST_WINDOW_WIDTH,
+    height: TOAST_WINDOW_HEIGHT,
+    frame: false,
+    transparent: true,
+    backgroundColor: '#00000000',
+    resizable: false,
+    movable: false,
+    minimizable: false,
+    maximizable: false,
+    closable: false,
+    focusable: false,
+    skipTaskbar: true,
+    show: false,
+    webPreferences: {
+      preload: path.join(__dirname, 'toast-preload.js'),
+      contextIsolation: true,
+      nodeIntegration: false,
+      sandbox: true,
+    },
+  });
+  toastWindow.setMenuBarVisibility(false);
+  toastWindow.setIgnoreMouseEvents(true);
+  toastWindow.on('closed', () => {
+    toastWindow = undefined;
+    toastOverlayReady = false;
+    toastOverlaySentSequence = 0;
+  });
+  positionToastWindow();
+  void toastWindow.loadFile(path.join(__dirname, 'toast.html')).catch((error) => {
+    console.error('Could not load the toast overlay:', error);
+    toastWindow?.close();
+  });
+}
+
+function showToastOverlay(message) {
+  toastMessage = message.trim().replace(/\s+/g, ' ').slice(0, 220);
+  if (!toastMessage) return false;
+  toastSequence += 1;
+  toastExpiresAt = Date.now() + TOAST_DURATION_MS;
+  clearTimeout(toastTimer);
+  toastTimer = setTimeout(() => {
+    toastMessage = undefined;
+    toastExpiresAt = 0;
+    toastWindow?.hide();
+  }, TOAST_DURATION_MS);
+  syncToastOverlay();
+  return true;
+}
+
+function syncToastOverlay() {
+  if (!toastMessage || Date.now() >= toastExpiresAt || !browserWindow || browserWindow.isDestroyed()) {
+    toastWindow?.hide();
+    return;
+  }
+  const activeTab = tabs.get(activeTabId);
+  const pageIsVisible = activeTab?.kind === 'web' && !activeTab.error;
+  if (!pageIsVisible || browserWindow.isMinimized()) {
+    toastWindow?.hide();
+    return;
+  }
+  if (!toastWindow) createToastWindow();
+  if (!toastWindow || toastWindow.isDestroyed()) return;
+  positionToastWindow();
+  const appearance = toastAppearance();
+  const appearanceSignature = JSON.stringify(appearance);
+  if (toastOverlayReady && (
+    toastOverlaySentSequence !== toastSequence
+    || toastOverlaySentAppearance !== appearanceSignature
+  )) {
+    toastOverlaySentSequence = toastSequence;
+    toastOverlaySentAppearance = appearanceSignature;
+    toastOverlayDisplayId += 1;
+    toastWindow.webContents.send('toast:show', {
+      message: toastMessage,
+      sequence: toastOverlayDisplayId,
+      ...appearance,
+    });
+  } else if (toastOverlayReady && !toastWindow.isVisible()) {
+    toastWindow.showInactive();
+  }
+}
+
+ipcMain.handle('browser:show-toast', (event, message) => {
+  assertTrustedUiSender(event);
+  if (typeof message !== 'string' || message.length > 2000) return false;
+  return showToastOverlay(message);
+});
+
+ipcMain.on('toast:ready', (event) => {
+  if (!toastWindow || event.sender !== toastWindow.webContents) return;
+  toastOverlayReady = true;
+  syncToastOverlay();
+});
+
+ipcMain.on('toast:painted', (event, sequence) => {
+  if (!toastWindow || event.sender !== toastWindow.webContents || sequence !== toastOverlayDisplayId) return;
+  if (Date.now() >= toastExpiresAt || browserWindow?.isMinimized()) return;
+  const activeTab = tabs.get(activeTabId);
+  if (activeTab?.kind === 'web' && !activeTab.error) {
+    positionToastWindow();
+    toastWindow.showInactive();
+  }
+});
 
 function updateViewBounds() {
   if (!browserWindow || browserWindow.isDestroyed()) {
@@ -1408,7 +1564,13 @@ function createWindow() {
       activeMatchOrdinal: result.activeMatchOrdinal,
     });
   });
-  browserWindow.on('resize', updateViewBounds);
+  browserWindow.on('resize', () => {
+    updateViewBounds();
+    positionToastWindow();
+  });
+  browserWindow.on('move', positionToastWindow);
+  browserWindow.on('minimize', () => toastWindow?.hide());
+  browserWindow.on('restore', syncToastOverlay);
   browserWindow.on('maximize', sendState);
   browserWindow.on('unmaximize', sendState);
   browserWindow.on('enter-full-screen', () => {
@@ -1426,6 +1588,9 @@ function createWindow() {
     }
   });
   browserWindow.on('closed', () => {
+    clearTimeout(toastTimer);
+    toastWindow?.close();
+    toastWindow = undefined;
     const openTabs = [...tabs.values()];
     browserWindow = undefined;
     tabs.clear();

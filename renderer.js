@@ -126,12 +126,23 @@ const START_PAGE_WIDGET_MANIFEST = [
 ];
 
 function showToast(message) {
-  toast.textContent = message;
+  const text = String(message || '').replace(/\s+/g, ' ').trim().slice(0, 220);
+  if (!text) return;
+  toast.setAttribute('aria-live', isWebPageActive() ? 'off' : 'polite');
+  toast.textContent = text;
   toast.hidden = false;
   window.clearTimeout(toastTimer);
   toastTimer = window.setTimeout(() => {
     toast.hidden = true;
   }, 4000);
+  void window.browser.showToast(text).catch(() => {
+    if (!toast.hidden) toast.setAttribute('aria-live', 'polite');
+  });
+}
+
+function isWebPageActive(state = browserState) {
+  const activeTab = state.tabs.find((tab) => tab.id === state.activeTabId);
+  return Boolean(activeTab && !activeTab.internalPage && !activeTab.error && state.internalPage === null);
 }
 
 function run(action) {
@@ -2507,6 +2518,7 @@ function renderState(state) {
   const previousInternalPage = browserState.internalPage;
   const previousError = browserState.error;
   browserState = state;
+  toast.setAttribute('aria-live', isWebPageActive(state) ? 'off' : 'polite');
   if (state.internalPage !== 'home') {
     window.clearInterval(clockTimer);
     window.clearInterval(wallpaperTimer);

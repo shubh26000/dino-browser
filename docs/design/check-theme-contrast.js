@@ -16,13 +16,13 @@ function declarations(block) {
 const palettes = Object.fromEntries(Object.entries(paletteBlocks).map(([name, block]) => {
   const tokens = declarations(block);
   return [name, {
-    bg: tokens['bg-window'], primary: tokens['text-primary'], secondary: tokens['text-secondary'],
+    bg: tokens['bg-window'], surface: tokens['bg-elevated'], primary: tokens['text-primary'], secondary: tokens['text-secondary'],
     disabled: tokens['text-disabled'], accent: tokens.accent, onAccent: tokens['text-on-accent'],
     border: tokens['border-strong'], focus: tokens['focus-ring'],
   }];
 }));
-palettes['High contrast light'] = { bg: '#ffffff', primary: '#000000', secondary: '#111111', disabled: '#444444', accent: '#001fbb', onAccent: '#ffffff', border: '#000000', focus: '#001fbb' };
-palettes['High contrast dark'] = { bg: '#000000', primary: '#ffffff', secondary: '#ffffff', disabled: '#cccccc', accent: '#ffeb3b', onAccent: '#000000', border: '#ffffff', focus: '#ffeb3b' };
+palettes['High contrast light'] = { bg: '#ffffff', surface: '#ffffff', primary: '#000000', secondary: '#111111', disabled: '#444444', accent: '#001fbb', onAccent: '#ffffff', border: '#000000', focus: '#001fbb' };
+palettes['High contrast dark'] = { bg: '#000000', surface: '#000000', primary: '#ffffff', secondary: '#ffffff', disabled: '#cccccc', accent: '#ffeb3b', onAccent: '#000000', border: '#ffffff', focus: '#ffeb3b' };
 
 function luminance(hex) {
   const normalized = hex.length === 4 ? `#${[...hex.slice(1)].map((value) => `${value}${value}`).join('')}` : hex;
@@ -41,6 +41,7 @@ let failures = 0;
 for (const [name, palette] of Object.entries(palettes)) {
   const checks = [
     ['primary text', palette.primary, palette.bg, 4.5],
+    ['toast text', palette.primary, palette.surface, 4.5],
     ['secondary text', palette.secondary, palette.bg, 4.5],
     ['disabled text', palette.disabled, palette.bg, 4.5],
     ['accent label', palette.onAccent, palette.accent, 4.5],
@@ -61,6 +62,6 @@ for (const wallpaperAccent of ['#45cfc1', '#fb8761', '#57bd79', '#45a7dc', '#d49
   if (!pass) failures += 1;
   console.log(`${pass ? 'PASS' : 'FAIL'} wallpaper accent ${wallpaperAccent} · readable label: ${bestLabel.toFixed(2)}:1 (min 4.5:1)`);
 }
-const checks = Object.keys(palettes).length * 7 + 5;
+const checks = Object.keys(palettes).length * 8 + 5;
 console.log(`${failures ? 'FAIL' : 'PASS'} ${checks} contrast checks · ${failures} failures`);
 if (failures) process.exitCode = 1;

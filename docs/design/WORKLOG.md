@@ -138,3 +138,10 @@
 - **Verification:** `npm test` **33 passed, 0 failed**; `npm run check:theme-contrast` **54 checks, 0 failures**; `node --check renderer.js` and `git diff --check` passed. Runtime focus review remains on the expanded Windows checklist.
 - **Next:** Continue cross-surface review; the toast-over-page layering gap remains open pending a runtime-safe design and verification path.
 
+## 2026-11-28 — Phase 5, batch 4: overlay-safe status toasts
+
+- **Layering:** Added a small, transparent, non-focusable child BrowserWindow for status messages while a web `WebContentsView` is active. Electron child windows stay above their parent; the overlay ignores mouse events so page interaction passes through. It tracks parent movement/resizing, hides during minimize/internal-page states, and restores while a message is still live.
+- **Accessibility and appearance:** Kept the browser renderer's live region for screen-reader feedback and disabled its duplicate announcement while the overlay is active. The overlay uses local assets, a restricted CSP, text-only IPC, theme/accent tokens, high-contrast colors, and reduced-motion settings.
+- **Verification:** `npm test` **33 passed, 0 failed**; `npm run check:theme-contrast` **61 checks, 0 failures**, including toast text on each palette's elevated surface; `node --check` passed for main/renderer and both preload/overlay scripts; package JSON parsing and `git diff --check` passed. The Electron window cannot be rendered in this environment, so visual stacking, focus, click-through, DPI, and timer behavior need Windows manual QA.
+- **Next:** Run code-level checks and review the overlay lifecycle carefully; then test it in a working Windows Electron runtime.
+

@@ -41,6 +41,7 @@ contextBridge.exposeInMainWorld('browser', {
   minimize: () => ipcRenderer.invoke('browser:minimize'),
   toggleMaximize: () => ipcRenderer.invoke('browser:toggle-maximize'),
   closeWindow: () => ipcRenderer.invoke('browser:close-window'),
+  showToast: (message) => ipcRenderer.invoke('browser:show-toast', message),
   onState: (callback) => {
     ipcRenderer.on('browser:state', (_event, state) => callback(state));
   },

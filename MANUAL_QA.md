@@ -57,8 +57,11 @@ full interactive QA for the current source remains in progress.
 - [ ] Test system/light/dark/high-contrast themes at 100%, 125%, 150%, and 200%.
 - [ ] Check native Shields, Extensions, and browser menus open above a live
   `WebContentsView`, and close cleanly by Escape, outside click, and selection.
-- [ ] Verify toast messages are visible while a web page is active; the current
-  toast is in the base renderer and may be covered by the page view.
+- [ ] Verify a toast appears above a live page, does not steal focus or block
+  mouse clicks, updates when another message arrives, and disappears after four
+  seconds. Move, resize, maximize, minimize, and restore the browser during a
+  toast; confirm internal-page toasts remain in browser chrome and theme/reduce-
+  motion preferences apply. Confirm a screen reader announces the status once.
 - [ ] Check settings search highlights and no-result state; test active-section
   fallback after filtering, Arrow Up/Down/Home/End navigation, and section links.
 - [ ] Check history day grouping, history/bookmark search, empty-state layout,

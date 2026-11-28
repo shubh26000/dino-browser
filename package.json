@@ -20,6 +20,10 @@
     "files": [
       "main.js",
       "preload.js",
+      "toast-preload.js",
+      "toast.html",
+      "toast.js",
+      "toast.css",
       "renderer.js",
       "browser-store.js",
       "extension-manager.js",
