@@ -30,6 +30,32 @@ const ICONS = {
   lock: '<rect x="5" y="10" width="14" height="11" rx="2"/><path d="M8 10V7a4 4 0 0 1 8 0v3M12 14v3"/>',
   globe: '<circle cx="12" cy="12" r="9"/><path d="M3.5 9h17M3.5 15h17M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>',
   warning: '<path d="m12 3 9 17H3L12 3Z"/><path d="M12 9v4m0 3h.01"/>',
+  appearance: '<circle cx="12" cy="12" r="9"/><path d="M12 3v18a9 9 0 0 0 0-18Z"/>',
+  shield: '<path d="M12 22s8-4 8-11V5l-8-3-8 3v6c0 7 8 11 8 11Z"/><path d="m9 12 2 2 4-4"/>',
+  search: '<circle cx="11" cy="11" r="7"/><path d="m20 20-4-4"/>',
+  extensions: '<path d="M4 7h5a3 3 0 1 1 6 0h5v5a3 3 0 1 0 0 6v2h-6a3 3 0 1 1-6 0H4V7Z"/>',
+  key: '<circle cx="8" cy="15" r="5"/><path d="m11.5 11.5 8-8 2 2-2 2 2 2-3 3-2-2-3 3"/>',
+  download: '<path d="M12 3v12m-5-5 5 5 5-5"/><path d="M5 17v4h14v-4"/>',
+  accessibility: '<circle cx="12" cy="4" r="1.5"/><path d="m5 8 7 2 7-2M12 10l-2 6-4 5m6-5 4 5m-4-5v-4"/>',
+  system: '<path d="M12 8a4 4 0 1 0 0 8 4 4 0 0 0 0-8Z"/><path d="m19.4 15 .1.1 1.4 1.1-1.4 2.4-1.7-.7a8 8 0 0 1-1.6.9l-.3 1.8h-2.8l-.3-1.8a8 8 0 0 1-1.6-.9l-1.7.7-1.4-2.4 1.4-1.1a7 7 0 0 1 0-1.9l-1.4-1.2 1.4-2.4 1.7.7a8 8 0 0 1 1.6-.9l.3-1.8h2.8l.3 1.8a8 8 0 0 1 1.6.9l1.7-.7 1.4 2.4-1.4 1.2a7 7 0 0 1-.1 1.8Z" transform="translate(-2 -2) scale(1.16)"/>',
+  reset: '<path d="M3 12a9 9 0 1 0 2.6-6.4L3 8"/><path d="M3 3v5h5m4-1v5l3 2"/>',
+  info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5m0-8h.01"/>',
+  profile: '<circle cx="12" cy="8" r="4"/><path d="M4 21a8 8 0 0 1 16 0"/>',
+};
+
+const SETTINGS_SECTION_ICONS = {
+  'get-started': 'profile',
+  appearance: 'appearance',
+  privacy: 'shield',
+  'search-engine': 'search',
+  extensions: 'extensions',
+  'autofill-passwords': 'key',
+  languages: 'globe',
+  downloads: 'download',
+  accessibility: 'accessibility',
+  system: 'system',
+  reset: 'reset',
+  about: 'info',
 };
 
 function makeIcon(name) {
@@ -1755,7 +1781,11 @@ function createSettingsSection(nav, content, id, title, description) {
   const navButton = document.createElement('button');
   navButton.className = 'settings-nav-link';
   navButton.type = 'button';
-  navButton.textContent = title;
+  const icon = makeIcon(SETTINGS_SECTION_ICONS[id] || 'info');
+  icon.classList.add('settings-nav-icon');
+  const label = document.createElement('span');
+  label.textContent = title;
+  navButton.append(icon, label);
   navButton.setAttribute('aria-controls', section.id);
   navButton.setAttribute('aria-current', 'false');
   navButton.tabIndex = nav.querySelector('.settings-nav-link') ? -1 : 0;

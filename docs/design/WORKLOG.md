@@ -97,3 +97,10 @@
 - **Known limits:** Rendered keyboard/screen-reader checks and screenshot evidence require a working Electron runtime. Multi-select rows and custom icons remain for a later pass.
 - **Next:** Continue Phase 4 with internal-page empty states, settings controls, and confirmation dialogs.
 
+## 2026-11-28 — Phase 4, batch 2: settings navigation scanability
+
+- **Settings sidebar:** Added a compact, consistent icon for each settings section. Icons are decorative and hidden from assistive technology; each button retains its visible text label and existing keyboard/active-section behavior. The selected icon uses the theme accent color.
+- **Verification:** `npm test` **33 passed, 0 failed**; `npm run check:theme-contrast` **54 checks, 0 failures**; `node --check renderer.js` and `git diff --check` passed.
+- **Known limits:** Electron runtime remains unavailable, so sidebar rendering and responsive behavior still need visual confirmation in the running app.
+- **Next:** Continue Phase 4 with settings and internal-page empty states, then return to the remaining confirmation-dialog polish.
+

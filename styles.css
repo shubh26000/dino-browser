@@ -2520,6 +2520,9 @@ body.high-contrast {
 
 .settings-nav-link {
   position: relative;
+  display: flex;
+  align-items: center;
+  gap: 9px;
   min-height: 36px;
   padding: 0 10px 0 17px;
   border: 0;
@@ -2529,6 +2532,14 @@ body.high-contrast {
   text-align: left;
   cursor: pointer;
   transition: background-color var(--motion-fast) ease, color var(--motion-fast) ease;
+}
+
+.settings-nav-icon {
+  width: 16px;
+  height: 16px;
+  flex: 0 0 16px;
+  color: var(--text-secondary);
+  transition: color var(--motion-fast) ease;
 }
 
 .settings-nav-link::before {
@@ -2554,6 +2565,10 @@ body.high-contrast {
 .settings-nav-link[aria-current="true"]::before {
   opacity: 1;
   transform: scaleY(1);
+}
+
+.settings-nav-link[aria-current="true"] .settings-nav-icon {
+  color: var(--accent);
 }
 
 .settings-content {
