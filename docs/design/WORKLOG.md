@@ -40,3 +40,12 @@
 - **Known limits:** Source Electron runtime QA remains unavailable, and full rendered contrast testing is pending. No navigation or privacy behavior was changed.
 - **Next:** Verify this batch, then begin Phase 3 start-page polish under Dino Night.
 
+## 2026-11-28 — Phase 3, batch 1: start-page motion and shortcut tiles
+
+- **Background and entrance:** Added subtle pointer parallax to the wallpaper layer, local-image fade-in after load, and a one-time staggered fade-and-rise for the first start-page content. Parallax and entrance motion are disabled when reduced motion is active; the small motion targets only transform and opacity.
+- **Shortcuts:** Letter tiles now use a stable domain-derived palette (all eight tested at **8.94:1 or better** against white). Tiles have lift/press/focus/drop states. User-added shortcuts can be reordered by drag or Ctrl+Left/Right; focus returns to the moved tile after the saved list rerenders. Built-in top-site ordering remains visit-based.
+- **Verification:** `npm test` **33 passed, 0 failed**; `npm run check:theme-contrast` **54 checks, 0 failures**; `node --check renderer.js` and `git diff --check` passed. The shortcut color set was independently checked for white-text contrast.
+- **Visual evidence and runtime:** Baseline capture remains [`03-start-page.jpg`](screenshots/before/03-start-page.jpg). I retried `npm start`; Electron still exits with code 1 without a diagnostic, so an after screenshot and performance measurements cannot be captured in this environment. Retake the after capture when the dev runtime launches.
+- **Known limits:** Time-of-day wallpaper mode, real favicons, shortcut edit menu, and widget loading/empty-state polish remain. No external assets or network requests were added.
+- **Next:** Continue Phase 3 with widgets and the customization drawer. Keep runtime capture/performance measurement listed as a QA gap.
+

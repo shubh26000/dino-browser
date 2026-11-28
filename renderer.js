@@ -489,14 +489,24 @@ function buildStartPageStats() {
 function buildShortcut(entry, isCustom = false) {
   const tile = document.createElement('article');
   tile.className = 'start-shortcut';
+  const shortcutId = isCustom ? entry.id : null;
+  if (shortcutId) {
+    tile.dataset.shortcutId = shortcutId;
+    tile.draggable = true;
+  }
   const open = document.createElement('button');
   open.className = 'start-shortcut-open';
   open.type = 'button';
   open.title = entry.url;
+  open.setAttribute('aria-label', `${entry.title || entry.url}, ${entry.url}`);
+  if (shortcutId) open.setAttribute('aria-keyshortcuts', 'Control+ArrowLeft Control+ArrowRight');
   const favicon = document.createElement('span');
   favicon.className = 'start-shortcut-icon';
   favicon.setAttribute('aria-hidden', 'true');
   favicon.textContent = (entry.title || entry.url).trim().slice(0, 1).toUpperCase();
+  const shortcutColors = ['#28385d', '#264253', '#3d315c', '#3f3545', '#31503f', '#4a3830', '#29465a', '#34424d'];
+  const shortcutHash = [...(entry.url || entry.title || '')].reduce((hash, character) => ((hash * 31) + character.charCodeAt(0)) >>> 0, 7);
+  favicon.style.setProperty('--shortcut-color', shortcutColors[shortcutHash % shortcutColors.length]);
   const label = document.createElement('span');
   label.className = 'start-shortcut-label';
   label.textContent = entry.title || entry.url;
@@ -514,8 +524,47 @@ function buildShortcut(entry, isCustom = false) {
       run(window.browser.updateStartPage({ shortcuts }));
     });
     tile.append(remove);
+    tile.addEventListener('dragstart', (event) => {
+      event.dataTransfer.setData('text/dino-shortcut-id', shortcutId);
+      event.dataTransfer.effectAllowed = 'move';
+      tile.classList.add('dragging');
+    });
+    tile.addEventListener('dragend', () => tile.classList.remove('dragging'));
+    tile.addEventListener('dragover', (event) => {
+      event.preventDefault();
+      event.dataTransfer.dropEffect = 'move';
+      tile.classList.add('drop-target');
+    });
+    tile.addEventListener('dragleave', () => tile.classList.remove('drop-target'));
+    tile.addEventListener('drop', (event) => {
+      event.preventDefault();
+      tile.classList.remove('drop-target');
+      const sourceId = event.dataTransfer.getData('text/dino-shortcut-id');
+      if (!sourceId || sourceId === shortcutId) return;
+      moveStartShortcut(sourceId, shortcutId);
+    });
+    open.addEventListener('keydown', (event) => {
+      if (!event.ctrlKey || !['ArrowLeft', 'ArrowRight'].includes(event.key)) return;
+      event.preventDefault();
+      const shortcuts = [...startPageValues().shortcuts];
+      const index = shortcuts.findIndex((shortcut) => shortcut.id === shortcutId);
+      const nextIndex = Math.max(0, Math.min(shortcuts.length - 1, index + (event.key === 'ArrowLeft' ? -1 : 1)));
+      if (nextIndex === index) return;
+      [shortcuts[index], shortcuts[nextIndex]] = [shortcuts[nextIndex], shortcuts[index]];
+      run(window.browser.updateStartPage({ shortcuts }).then(() => showToast(`Moved ${entry.title || 'shortcut'}.`)));
+    });
   }
   return tile;
+}
+
+function moveStartShortcut(sourceId, targetId) {
+  const shortcuts = [...startPageValues().shortcuts];
+  const sourceIndex = shortcuts.findIndex((shortcut) => shortcut.id === sourceId);
+  const targetIndex = shortcuts.findIndex((shortcut) => shortcut.id === targetId);
+  if (sourceIndex < 0 || targetIndex < 0 || sourceIndex === targetIndex) return;
+  const [moved] = shortcuts.splice(sourceIndex, 1);
+  shortcuts.splice(targetIndex, 0, moved);
+  run(window.browser.updateStartPage({ shortcuts }));
 }
 
 function makeShortcutDialog() {
@@ -686,6 +735,10 @@ function renderStartPageContent(focusSearch = false) {
   const previousSearch = root.querySelector('.home-search-input');
   const previousSearchValue = previousSearch?.value || '';
   const shouldRefocusSearch = document.activeElement === previousSearch;
+  const focusedShortcutId = document.activeElement?.closest('.start-shortcut')?.dataset.shortcutId;
+  const playEntrance = !root.dataset.entrancePlayed && !document.body.classList.contains('reduce-motion');
+  root.dataset.entrancePlayed = 'true';
+  bindStartPageParallax(root);
   const settings = startPageValues();
   root.dataset.wallpaper = settings.wallpaper;
   root.dataset.layout = settings.layout;
@@ -702,6 +755,7 @@ function renderStartPageContent(focusSearch = false) {
     const wallpaper = document.createElement('img');
     wallpaper.className = 'start-wallpaper';
     wallpaper.alt = '';
+    wallpaper.addEventListener('load', () => wallpaper.classList.add('is-loaded'), { once: true });
     wallpaper.src = settings.wallpaperUrl;
     wallpaper.addEventListener('error', () => wallpaper.remove(), { once: true });
     root.prepend(wallpaper);
@@ -787,6 +841,18 @@ function renderStartPageContent(focusSearch = false) {
     content.append(widgets);
   }
   contentHost.append(content);
+  if (playEntrance) {
+    const centerChildren = [...center.children];
+    const entranceItems = [
+      ...[...content.children].filter((child) => child !== center),
+      ...centerChildren,
+    ];
+    entranceItems.forEach((item, index) => {
+      item.classList.add('start-entrance-item');
+      item.style.setProperty('--entrance-delay', `${Math.min(index * 38, 190)}ms`);
+    });
+    window.setTimeout(() => entranceItems.forEach((item) => item.classList.remove('start-entrance-item')), 500);
+  }
   if (!root.querySelector('#shortcut-dialog')) root.append(makeShortcutDialog());
   updatePrivacyStats();
   syncStartPageControls();
@@ -809,6 +875,26 @@ function renderStartPageContent(focusSearch = false) {
     && (focusSearch || shouldRefocusSearch)
     && !document.querySelector('#customize-drawer:not([hidden])')
   ) searchInput.focus();
+  else if (focusedShortcutId) {
+    root.querySelector(`[data-shortcut-id="${CSS.escape(focusedShortcutId)}"] .start-shortcut-open`)?.focus();
+  }
+}
+
+function bindStartPageParallax(root) {
+  if (root.dataset.parallaxBound) return;
+  root.dataset.parallaxBound = 'true';
+  root.addEventListener('pointermove', (event) => {
+    if (document.body.classList.contains('reduce-motion')) return;
+    const bounds = root.getBoundingClientRect();
+    const x = ((event.clientX - bounds.left) / Math.max(1, bounds.width) - 0.5) * -16;
+    const y = ((event.clientY - bounds.top) / Math.max(1, bounds.height) - 0.5) * -16;
+    root.style.setProperty('--parallax-x', `${x.toFixed(1)}px`);
+    root.style.setProperty('--parallax-y', `${y.toFixed(1)}px`);
+  });
+  root.addEventListener('pointerleave', () => {
+    root.style.setProperty('--parallax-x', '0px');
+    root.style.setProperty('--parallax-y', '0px');
+  });
 }
 
 function renderCustomizeDrawer() {
