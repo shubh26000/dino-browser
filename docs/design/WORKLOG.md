@@ -49,3 +49,11 @@
 - **Known limits:** Time-of-day wallpaper mode, real favicons, shortcut edit menu, and widget loading/empty-state polish remain. No external assets or network requests were added.
 - **Next:** Continue Phase 3 with widgets and the customization drawer. Keep runtime capture/performance measurement listed as a QA gap.
 
+## 2026-11-28 — Phase 3, batch 2: shortcuts and widgets
+
+- **Shortcut editing:** User-added tiles now have a disclosure menu for Edit and Remove. The existing validated HTTP/HTTPS dialog now supports editing in place, keeps shortcut identity/order, rejects blank names, and reports save success or failure.
+- **Widget feedback:** Notes show a polite “Saving…” / “Saved locally” status and report persistence failures. To-do rows now animate into their completed state, and the empty list gives a next action. Widget cards get a restrained hover/focus lift and accent heading marker.
+- **Verification:** `npm test` **33 passed, 0 failed**; `npm run check:theme-contrast` **54 checks, 0 failures**; `node --check renderer.js` and `git diff --check` passed.
+- **Known limits:** No new dependency or remote content. Browser runtime still exits without a diagnostic; visual widget/dialog verification and after screenshots are pending.
+- **Next:** Continue Phase 3 with customization-drawer states and widget layout polish, then revisit the runtime capture gap.
+

@@ -514,16 +514,31 @@ function buildShortcut(entry, isCustom = false) {
   open.addEventListener('click', () => run(window.browser.navigate(entry.url)));
   tile.append(open);
   if (isCustom) {
+    const actions = document.createElement('details');
+    actions.className = 'start-shortcut-actions';
+    const summary = document.createElement('summary');
+    summary.textContent = '⋯';
+    summary.setAttribute('aria-label', `More options for ${entry.title}`);
+    const actionList = document.createElement('div');
+    actionList.className = 'start-shortcut-action-list';
+    const edit = document.createElement('button');
+    edit.type = 'button';
+    edit.textContent = 'Edit';
+    edit.addEventListener('click', () => {
+      actions.open = false;
+      openShortcutDialog(entry);
+    });
     const remove = document.createElement('button');
-    remove.className = 'start-shortcut-remove';
     remove.type = 'button';
-    remove.textContent = '×';
+    remove.textContent = 'Remove';
     remove.setAttribute('aria-label', `Remove shortcut ${entry.title}`);
     remove.addEventListener('click', () => {
       const shortcuts = startPageValues().shortcuts.filter((shortcut) => shortcut.id !== entry.id);
       run(window.browser.updateStartPage({ shortcuts }));
     });
-    tile.append(remove);
+    actionList.append(edit, remove);
+    actions.append(summary, actionList);
+    tile.append(actions);
     tile.addEventListener('dragstart', (event) => {
       event.dataTransfer.setData('text/dino-shortcut-id', shortcutId);
       event.dataTransfer.effectAllowed = 'move';
@@ -596,6 +611,7 @@ function makeShortcutDialog() {
   save.textContent = 'Add';
   actions.append(cancel, save);
   form.append(heading, name, url, actions);
+  dialog._shortcutForm = { heading, name, url, save };
   form.addEventListener('submit', (event) => {
     event.preventDefault();
     let parsed;
@@ -604,19 +620,48 @@ function makeShortcutDialog() {
       showToast('Enter a valid HTTP or HTTPS address.');
       return;
     }
-    if (startPageValues().shortcuts.length >= 20) {
+    const title = name.value.trim();
+    if (!title) {
+      showToast('Enter a name for this shortcut.');
+      name.focus();
+      return;
+    }
+    const editingId = dialog.dataset.editingShortcutId;
+    if (!editingId && startPageValues().shortcuts.length >= 20) {
       showToast('You can save up to 20 custom shortcuts.');
       return;
     }
-    const shortcuts = [...startPageValues().shortcuts, {
-      id: `shortcut-${Date.now()}-${++shortcutSequence}`,
-      title: name.value.trim(),
-      url: parsed.href,
-    }];
-    run(window.browser.updateStartPage({ shortcuts }).then(() => dialog.close()));
+    const shortcuts = [...startPageValues().shortcuts];
+    if (editingId) {
+      const index = shortcuts.findIndex((shortcut) => shortcut.id === editingId);
+      if (index < 0) {
+        showToast('That shortcut is no longer available.');
+        dialog.close();
+        return;
+      }
+      shortcuts[index] = { ...shortcuts[index], title, url: parsed.href };
+    } else {
+      shortcuts.push({ id: `shortcut-${Date.now()}-${++shortcutSequence}`, title, url: parsed.href });
+    }
+    window.browser.updateStartPage({ shortcuts }).then(() => {
+      dialog.close();
+      showToast(editingId ? 'Shortcut updated.' : 'Shortcut added.');
+    }, (error) => showToast(error.message || 'The shortcut could not be saved.'));
   });
   dialog.append(form);
   return dialog;
+}
+
+function openShortcutDialog(shortcut = null) {
+  const dialog = document.querySelector('#shortcut-dialog');
+  if (!dialog?._shortcutForm) return;
+  const { heading, name, url, save } = dialog._shortcutForm;
+  dialog.dataset.editingShortcutId = shortcut?.id || '';
+  heading.textContent = shortcut ? 'Edit shortcut' : 'Add shortcut';
+  name.value = shortcut?.title || '';
+  url.value = shortcut?.url || '';
+  save.textContent = shortcut ? 'Save' : 'Add';
+  dialog.showModal();
 }
 
 function createWidgetCard(widget) {
@@ -684,9 +729,11 @@ function createWidgetCard(widget) {
       const text = document.createElement('span');
       text.textContent = todo.text;
       text.classList.toggle('todo-done', todo.done);
+      item.classList.toggle('is-done', todo.done);
       toggle.addEventListener('change', () => {
         const todoItems = startPageValues().todoItems.map((saved) => saved.id === todo.id ? { ...saved, done: toggle.checked } : saved);
         text.classList.toggle('todo-done', toggle.checked);
+        item.classList.toggle('is-done', toggle.checked);
         run(window.browser.updateStartPage({ todoItems }));
       });
       const remove = document.createElement('button');
@@ -704,27 +751,48 @@ function createWidgetCard(widget) {
       item.append(toggle, text, remove);
       list.append(item);
     }
-    if (!list.childElementCount) list.append(makeEmptyState('Nothing on your list.'));
+    if (!list.childElementCount) list.append(makeEmptyState('You’re all caught up. Add a task above when you need one.'));
     card.append(form, list);
   } else if (widget.id === 'notes') {
+    const notesEditor = document.createElement('div');
+    notesEditor.className = 'quick-notes-editor';
     const notes = document.createElement('textarea');
     notes.className = 'quick-notes';
     notes.maxLength = 5000;
     notes.value = startPageValues().notes;
     notes.placeholder = 'Write a note…';
     notes.setAttribute('aria-label', 'Quick notes');
+    const saveStatus = document.createElement('span');
+    saveStatus.className = 'quick-notes-status';
+    saveStatus.setAttribute('role', 'status');
+    saveStatus.setAttribute('aria-live', 'polite');
+    saveStatus.textContent = 'Saved locally';
     notes.addEventListener('input', () => {
       window.clearTimeout(notesSaveTimer);
       const value = notes.value;
+      saveStatus.textContent = 'Saving…';
       notesSaveTimer = window.setTimeout(() => {
-        run(window.browser.updateStartPage({ notes: value }));
+        window.browser.updateStartPage({ notes: value }).then(
+          () => { saveStatus.textContent = 'Saved locally'; },
+          (error) => {
+            saveStatus.textContent = 'Could not save';
+            showToast(error.message || 'Your note could not be saved.');
+          },
+        );
       }, 500);
     });
     notes.addEventListener('blur', () => {
       window.clearTimeout(notesSaveTimer);
-      run(window.browser.updateStartPage({ notes: notes.value }));
+      window.browser.updateStartPage({ notes: notes.value }).then(
+        () => { saveStatus.textContent = 'Saved locally'; },
+        (error) => {
+          saveStatus.textContent = 'Could not save';
+          showToast(error.message || 'Your note could not be saved.');
+        },
+      );
     });
-    card.append(notes);
+    notesEditor.append(notes, saveStatus);
+    card.append(notesEditor);
   }
   return card;
 }
@@ -825,7 +893,7 @@ function renderStartPageContent(focusSearch = false) {
     add.className = 'start-shortcut-add';
     add.type = 'button';
     add.textContent = '+ Add shortcut';
-    add.addEventListener('click', () => document.querySelector('#shortcut-dialog').showModal());
+    add.addEventListener('click', () => openShortcutDialog());
     shortcutSection.append(add);
     content.append(shortcutSection);
   }

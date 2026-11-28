@@ -1821,23 +1821,66 @@ body.high-contrast {
   white-space: nowrap;
 }
 
-.start-shortcut-remove {
+.start-shortcut-actions {
   position: absolute;
-  top: 3px;
+  z-index: 1;
+  top: 4px;
   right: 4px;
-  display: none;
-  width: 22px;
-  height: 22px;
-  border: 0;
-  border-radius: 50%;
-  background: rgb(20 22 30 / 72%);
-  color: white;
-  cursor: pointer;
 }
 
-.start-shortcut:hover .start-shortcut-remove,
-.start-shortcut-remove:focus-visible {
-  display: block;
+.start-shortcut-actions > summary {
+  display: grid;
+  width: 26px;
+  height: 26px;
+  place-items: center;
+  border: 1px solid rgb(255 255 255 / 20%);
+  border-radius: var(--radius-pill);
+  background: rgb(20 22 30 / 76%);
+  color: white;
+  cursor: pointer;
+  font-size: 17px;
+  line-height: 1;
+  list-style: none;
+  opacity: 0;
+  transition: opacity var(--motion-fast) ease, background-color var(--motion-fast) ease;
+}
+
+.start-shortcut-actions > summary::-webkit-details-marker {
+  display: none;
+}
+
+.start-shortcut:hover .start-shortcut-actions > summary,
+.start-shortcut:focus-within .start-shortcut-actions > summary,
+.start-shortcut-actions[open] > summary {
+  opacity: 1;
+}
+
+.start-shortcut-action-list {
+  position: absolute;
+  top: 30px;
+  right: 0;
+  display: grid;
+  min-width: 112px;
+  padding: 4px;
+  border: 1px solid var(--border-strong);
+  border-radius: var(--radius-md);
+  background: var(--bg-elevated);
+  box-shadow: var(--shadow-2);
+}
+
+.start-shortcut-action-list button {
+  padding: 7px 10px;
+  border: 0;
+  border-radius: var(--radius-sm);
+  background: transparent;
+  color: var(--text-primary);
+  cursor: pointer;
+  text-align: left;
+}
+
+.start-shortcut-action-list button:hover,
+.start-shortcut-action-list button:focus-visible {
+  background: var(--accent-soft);
 }
 
 .start-shortcut-add {
@@ -1871,12 +1914,30 @@ body.high-contrast {
   box-shadow: 0 12px 28px rgb(0 0 0 / 12%);
   color: white;
   backdrop-filter: blur(var(--blur-glass));
+  transition: transform var(--motion-small) ease, border-color var(--motion-small) ease, background-color var(--motion-small) ease;
+}
+
+.start-widget:hover,
+.start-widget:focus-within {
+  transform: translateY(-2px);
+  border-color: rgb(255 255 255 / 36%);
+  background: rgb(255 255 255 / 16%);
 }
 
 .start-widget h2 {
   margin: 0 0 12px;
   font-size: 13px;
   font-weight: 600;
+}
+
+.start-widget h2::after {
+  display: block;
+  width: 22px;
+  height: 2px;
+  margin-top: 7px;
+  border-radius: var(--radius-pill);
+  background: var(--gradient-accent);
+  content: "";
 }
 
 .start-widget p {
@@ -1953,6 +2014,18 @@ body.high-contrast {
   gap: 7px;
   color: rgb(255 255 255 / 90%);
   font-size: 12px;
+  padding: 4px 6px;
+  border-radius: var(--radius-sm);
+  transition: background-color var(--motion-fast) ease, transform var(--motion-fast) ease;
+}
+
+.todo-list li.is-done {
+  background: rgb(255 255 255 / 8%);
+  transform: translateX(2px);
+}
+
+.todo-list input[type="checkbox"] {
+  accent-color: var(--accent-2);
 }
 
 .todo-list li span {
@@ -1977,6 +2050,19 @@ body.high-contrast {
   min-height: 100px;
   resize: vertical;
   font: 12px/1.5 "Segoe UI", system-ui, sans-serif;
+}
+
+.quick-notes-editor {
+  display: grid;
+  gap: 6px;
+}
+
+.quick-notes-status {
+  justify-self: end;
+  min-height: 14px;
+  color: rgb(255 255 255 / 76%);
+  font-size: 11px;
+  transition: opacity var(--motion-fast) ease;
 }
 
 .start-customize-button {
