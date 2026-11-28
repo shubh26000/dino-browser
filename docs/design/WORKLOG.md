@@ -132,3 +132,9 @@
 - **Verification:** Documentation diff checked; code-level tests from Phase 5 batch 1 remain green. This checklist update does not substitute for interactive review.
 - **Next:** Continue code-level cross-surface review and resolve the toast visibility path without weakening the page-view isolation model.
 
+## 2026-11-28 — Phase 5, batch 3: explicit confirmation focus semantics
+
+- **Dialogs:** Destructive-action dialogs now expose explicit accessible title/description relationships, start on Cancel, and return focus to the invoking control after Escape, Cancel, or confirmation when that control remains available.
+- **Verification:** `npm test` **33 passed, 0 failed**; `npm run check:theme-contrast` **54 checks, 0 failures**; `node --check renderer.js` and `git diff --check` passed. Runtime focus review remains on the expanded Windows checklist.
+- **Next:** Continue cross-surface review; the toast-over-page layering gap remains open pending a runtime-safe design and verification path.
+

@@ -1676,13 +1676,18 @@ function confirmClearData() {
 }
 
 function showConfirmDialog({ title, message, confirmLabel, onConfirm }) {
+  const returnFocus = document.activeElement;
   const dialog = document.createElement('dialog');
   dialog.className = 'shortcut-dialog confirm-action-dialog';
+  dialog.setAttribute('aria-labelledby', 'confirm-action-title');
+  dialog.setAttribute('aria-describedby', 'confirm-action-detail');
   const form = document.createElement('form');
   form.method = 'dialog';
   const heading = document.createElement('h2');
+  heading.id = 'confirm-action-title';
   heading.textContent = title;
   const detail = document.createElement('p');
+  detail.id = 'confirm-action-detail';
   detail.textContent = message;
   const actions = document.createElement('div');
   actions.className = 'shortcut-dialog-actions';
@@ -1700,7 +1705,10 @@ function showConfirmDialog({ title, message, confirmLabel, onConfirm }) {
   form.append(heading, detail, actions);
   dialog.append(form);
   document.body.append(dialog);
-  dialog.addEventListener('close', () => dialog.remove(), { once: true });
+  dialog.addEventListener('close', () => {
+    dialog.remove();
+    if (returnFocus?.isConnected && typeof returnFocus.focus === 'function') returnFocus.focus();
+  }, { once: true });
   form.addEventListener('submit', (event) => {
     event.preventDefault();
     dialog.close();
